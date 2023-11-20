@@ -33,7 +33,8 @@ struct WFMT_EXT {
 	GUID         subformat;
 };
 
-struct WASAPISession {
+class WASAPISession {
+public:
 	IAudioSessionControl*	session_control;
 	IAudioClient2*			audio_client;
 	IAudioRenderClient*		render_client;
@@ -68,14 +69,14 @@ struct WASAPISession {
 	UINT64					master_samples_processed;
 	bool					is_master_processed;
 
+	HRESULT initialize(WASAPIOpenMode mode = WASAPIOpenMode::DEFAULT_DEVICE);
 	void shutdown();
 	HRESULT write_data(MasterBuffer* const buffer, UINT32 frames_requested);
 	HRESULT write_zeroes();
 	SampleType get_sample_type();
 };
 
-HRESULT initialize_wasapi(WASAPIOpenMode mode);
-WASAPISession* get_wasapi();
+
 SampleType get_sample_type_wfmt(WAVEFORMATEX* wfmt);
 SampleType get_sample_type_subfmt(GUID* subformat);
 const std::string hr_aud_clnt_err_to_string(HRESULT hr);

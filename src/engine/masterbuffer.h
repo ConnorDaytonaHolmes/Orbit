@@ -21,7 +21,6 @@ public:
 	void process_output() override;
 	void clear_buffer() override;
 	void set_sample_type(SampleType st);
-	std::shared_ptr<Mixer> mixer;
 
 private:
 	const bool PRECLAMP_FLOATS = true;

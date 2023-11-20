@@ -10,8 +10,6 @@ add_library(driver
 	"driver/wasapi/wasapiconfig.h"
 	"driver/asio/asio_util.h"
 	"driver/asio/asio_util.cpp"
-	"driver/driverinterface.h"
-	"driver/driverinterface.cpp"
 )
 target_include_directories(driver PUBLIC
 	"driver"
@@ -38,6 +36,8 @@ add_library(engine
 	"engine/route.cpp"
 	"engine/route.h"
 	"engine/sampletype.h"
+	"engine/engine.h"
+	"engine/engine.cpp"
 )
 target_include_directories(engine PUBLIC "engine")
 

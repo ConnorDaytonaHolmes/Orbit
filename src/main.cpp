@@ -10,6 +10,7 @@
 #include <Walnut/EntryPoint.h>
 #include <Walnut/Image.h>
 #include <imgui.h>
+#include <engine/engine.h>
 
 #include "config.h" // cmake config
 #include "env_32_64.h" //32/64-bit helper
@@ -23,6 +24,7 @@
 #include "wav/parsewav.h"
 #include "wavplayer.h"
 #include "engine/sampletype.h"
+#include <driverinterface.h>
 
 namespace wt = wavetable;
 
@@ -40,114 +42,29 @@ public:
 	}
 };
 
-int init_audio_engine();
+std::thread audio_thread;
+AudioEngine engine;
+DriverInterface di(&engine);
+
 
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
 	Walnut::ApplicationSpecification spec;
 	spec.Name = "Orbit";
 	//spec.CustomTitlebar = true;
-
+	audio_thread = std::thread(&AudioEngine::start, &engine);
 	Walnut::Application* app = new Walnut::Application(spec);
 	app->PushLayer<ExampleLayer>();
 	app->SetMenubarCallback([app]() {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Exit")) {
+				engine.shutdown();
+				audio_thread.join();
 				app->Close();
 			}
 			ImGui::EndMenu();
 		}
 	});
-	init_audio_engine();
 	return app;
-}
-
-int init_audio_engine() {
-	ASIO* asio;
-	WASAPISession* wasapi_session;
-	MasterBuffer* master_buffer;
-
-	uint32_t buffer_size;
-	double sample_rate;
-	SampleType sample_type;
-
-#ifdef USE_ASIO
-	// Initialize ASIO driver
-	asio = get_asio();
-
-	// Print all available drivers
-	asio->retrieve_driver_names();
-	asio->print_driver_names();
-
-	// Initialize ASIO
-	long init_asio_result = asio->init((char*)ASIO_DRIVER_NAME);
-	if (init_asio_result != HOST_OK) {
-		print_host_error(init_asio_result);
-		return init_asio_result;
-	}
-	sample_type = (SampleType)asio->info.channelInfos[0].type;
-	buffer_size = asio->info.preferredSize * 2;
-	sample_rate = asio->info.sampleRate;
-#else
-	HRESULT init_wasapi_hr = initialize_wasapi(WASAPIOpenMode::DEFAULT_DEVICE);
-	if (FAILED(init_wasapi_hr)) {
-		_com_error err(init_wasapi_hr);
-		LPCTSTR err_msg = err.ErrorMessage();
-		printf(err_msg);
-		return init_wasapi_hr;
-	}
-	wasapi_session = get_wasapi();
-	buffer_size = wasapi_session->buffer_size * wasapi_session->wave_format->Format.nChannels;
-	sample_rate = (double)wasapi_session->wave_format->Format.nSamplesPerSec;
-	sample_type = wasapi_session->get_sample_type();
-#endif
-
-	// Make master buffer (what gets copied into ASIO buffer)
-	master_buffer = new MasterBuffer(
-		sample_type,
-		buffer_size,
-		sample_rate
-	);
-	
-	master_buffer->mixer.get()->routing_table.assign_route(0, 1, 1.0f);
-	/*
-	WAVPlayer wp(buffer_size, sample_rate);
-	wp.load(".audio/realquick.wav");
-	//wp.load(".audio/440boop.wav");
-	wp.volume = 1.0f;
-	wp.set_loop(true);
-	if (wp.is_loaded()) {
-		master_buffer->mixer.get()->get_mixer_track(1)->assign_input(&wp);
-		wp.play();
-	}
-	*/
-	wt::WavetableCollection* lib = oscillator_test(master_buffer);
-
-#ifdef USE_ASIO
-	// Start ASIO
-	master_buffer->volume = 0.4f;
-	asio->set_master_buffer(master_buffer);
-	long start_result = asio->start();
-	if (start_result != ASE_OK) {
-		print_host_error(start_result);
-		return start_result;
-	}
-	asio_test_loop(&asio->info);
-	asio->shutdown();
-#else
-	// Start WASAPI Session
-	master_buffer->volume = 0.05f;
-	wasapi_session->audio_client->Start();
-	HRESULT hr = wasapi_test_loop(wasapi_session, master_buffer);
-	if (FAILED(hr)) {
-		_com_error err(hr);
-		printf("WASAPI test error.\n%s", err.ErrorMessage());
-		return hr;
-	}
-#endif
-	
-	delete master_buffer;
-	//delete lib;
-	return 0;
 }
 
 void print_version() {

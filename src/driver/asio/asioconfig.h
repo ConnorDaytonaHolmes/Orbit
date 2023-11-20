@@ -5,7 +5,6 @@
 #include "asio.h"
 #include "asiodrivers.h"
 #include "focusrite18i20.h"
-#include "../../engine/masterbuffer.h"
 #include "../../util.h"
 
 #if WINDOWS
@@ -97,6 +96,8 @@ public:
 	ASIO();
 	~ASIO();
 
+	void (*buffer_callback)(void* left, void* right);
+
 	// Returns a HOST_OK or a HostError containing an inner ASIOError
 	long init(char* driver_name);
 	// Returns a HOST_OK or a HostError containing an inner ASIOError
@@ -107,11 +108,11 @@ public:
 	bool retrieve_driver_names();
 	void print_driver_names();
 	void dispose_driver_names();
-
+	char* get_driver_name(int index);
 	void shutdown();
 
-	void set_master_buffer(MasterBuffer* master) { this->master = master; }
-	MasterBuffer* get_master_buffer() { return master; }
+	ASIOTime* m_bufferSwitchTimeInfo(ASIOTime* params, long doubleBufferIndex, ASIOBool directProcess);
+	bool initialized = false;
 
 private:
 	// Returns a HostError (FailedToLoadASIODriver or HOST_OK)
@@ -122,8 +123,6 @@ private:
 	void* driver_name_block = nullptr;
 	char* driver_names[MAX_DRIVERS];
 	unsigned int number_of_available_drivers = 0;
-
-	MasterBuffer* master;
 };
 
 ASIO* get_asio();

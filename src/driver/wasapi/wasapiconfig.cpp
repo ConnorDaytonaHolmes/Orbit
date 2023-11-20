@@ -1,5 +1,5 @@
 #include "wasapiconfig.h"
-
+#include "audioenginebaseapo.h"
 #define EXIT_ON_ERROR(hres) \
 			if (FAILED(hres)) { printf("WASAPI failed to initialize: HRESULT failed on line %d.\n", __LINE__-1); goto Exit; }
 
@@ -16,7 +16,8 @@ const IID IID_IAudioSessionControl = __uuidof(IAudioSessionControl);
 const bool LOW_LATENCY_REQUEST = true;
 const bool FAIL_ON_LOW_LATENCY_DENIED = true;
 
-WASAPISession w;
+
+
 
 HRESULT WASAPISession::write_data(MasterBuffer* const master, UINT32 frames_requested) {	
 	// If buffer is fresh, process master buffer
@@ -26,6 +27,7 @@ HRESULT WASAPISession::write_data(MasterBuffer* const master, UINT32 frames_requ
 		is_master_processed = true;
 		master_samples_processed = 0;
 	}
+
 
 	// Get the master buffer array,
 	const byte* master_buffer = (byte*)master->get_buffer();
@@ -154,12 +156,7 @@ void WASAPISession::shutdown() {
 	SAFE_RELEASE(render_client);
 }
 
-WASAPISession* get_wasapi() {
-	return &w;
-}
-
-HRESULT initialize_wasapi(WASAPIOpenMode mode) {
-	w = WASAPISession { 0 };
+HRESULT WASAPISession::initialize(WASAPIOpenMode mode) {
 	HRESULT hr;
 	AudioClientProperties ac_properties{};
 	BOOL is_offload_capable = false;
@@ -173,14 +170,14 @@ HRESULT initialize_wasapi(WASAPIOpenMode mode) {
 		NULL,
 		CLSCTX_ALL,
 		IID_IMMDeviceEnumerator,
-		(void**)&w.mm_device_enumerator);
+		(void**)&mm_device_enumerator);
 	EXIT_ON_ERROR(hr);
 
 	switch (mode) {
 	case DEFAULT_DEVICE:
 	{
-		hr = w.mm_device_enumerator->GetDefaultAudioEndpoint(
-			EDataFlow::eRender,	ERole::eMultimedia,	&w.mm_device);
+		hr = mm_device_enumerator->GetDefaultAudioEndpoint(
+			EDataFlow::eRender,	ERole::eMultimedia,	&mm_device);
 		EXIT_ON_ERROR(hr);
 		break;
 	}
@@ -192,14 +189,14 @@ HRESULT initialize_wasapi(WASAPIOpenMode mode) {
 	}
 
 	LPWSTR device_id;
-	hr = w.mm_device->GetId(&device_id);
+	hr = mm_device->GetId(&device_id);
 	EXIT_ON_ERROR(hr);
 
 
 	IPropertyStore* device_properties;
 	PROPVARIANT dfn;
 	PropVariantInit(&dfn);
-	w.mm_device->OpenPropertyStore(STGM_READ, &device_properties);
+	mm_device->OpenPropertyStore(STGM_READ, &device_properties);
 	hr = device_properties->GetValue(
 		PKEY_Device_FriendlyName, &dfn);
 	EXIT_ON_ERROR(hr);
@@ -209,33 +206,33 @@ HRESULT initialize_wasapi(WASAPIOpenMode mode) {
 	}
 
 	// Active endpoint device
-	w.mm_device->Activate(
+	mm_device->Activate(
 		IID_IAudioClient2,
 		CLSCTX_ALL,
 		NULL,
-		(void**)&w.audio_client);
+		(void**)&audio_client);
 	EXIT_ON_ERROR(hr);
 
 	// Retrieve audio format
-	hr = w.audio_client->GetMixFormat((WAVEFORMATEX**)&w.wave_format);
+	hr = audio_client->GetMixFormat((WAVEFORMATEX**)&wave_format);
 	EXIT_ON_ERROR(hr);
 
-	w.format_tag = w.wave_format->Format.wFormatTag;
-	if (w.format_tag == WAVE_FORMAT_EXTENSIBLE)
-		w.format_tag = EXTRACT_WAVEFORMATEX_ID(&w.wave_format->SubFormat);
+	format_tag = wave_format->Format.wFormatTag;
+	if (format_tag == WAVE_FORMAT_EXTENSIBLE)
+		format_tag = EXTRACT_WAVEFORMATEX_ID(&wave_format->SubFormat);
 
-	switch (w.wave_format->Format.wFormatTag) {
+	switch (wave_format->Format.wFormatTag) {
 	case WAVE_FORMAT_PCM:
 	case WAVE_FORMAT_IEEE_FLOAT:
-		w.wave_format->Format.cbSize = 0;
+		wave_format->Format.cbSize = 0;
 		break;
 	}
 	
-	hr = w.audio_client->GetDevicePeriod(&w.mm_device_info.default_period, &w.mm_device_info.minimum_period);
+	hr = audio_client->GetDevicePeriod(&mm_device_info.default_period, &mm_device_info.minimum_period);
 	EXIT_ON_ERROR(hr)
 	
 	// Queries hardware offloading capability, sets the audio client accordingly
-	hr = w.audio_client->IsOffloadCapable(AudioCategory_Media, &is_offload_capable);
+	hr = audio_client->IsOffloadCapable(AudioCategory_Media, &is_offload_capable);
 	EXIT_ON_ERROR(hr);
 
 	ac_properties.cbSize = sizeof(AudioClientProperties);
@@ -243,74 +240,74 @@ HRESULT initialize_wasapi(WASAPIOpenMode mode) {
 	ac_properties.eCategory = AudioCategory_Media;
 	ac_properties.Options = AUDCLNT_STREAMOPTIONS_RAW | AUDCLNT_STREAMOPTIONS_MATCH_FORMAT;
 	
-	hr = w.audio_client->SetClientProperties(&ac_properties);
+	hr = audio_client->SetClientProperties(&ac_properties);
 	EXIT_ON_ERROR(hr);
-	
+
 	// Initialize audio client with minimum latency
-	hr = w.audio_client->Initialize(
+	hr = audio_client->Initialize(
 		AUDCLNT_SHAREMODE_SHARED,
 		WASAPI_STREAMFLAGS,
-		w.mm_device_info.default_period,
-		w.mm_device_info.default_period,
-		&w.wave_format->Format,
+		mm_device_info.default_period,
+		mm_device_info.default_period,
+		&wave_format->Format,
 		NULL);
 
 	// Align the buffer if needed, see IAudioClient::Initialize() documentation
 	if (hr == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
 		UINT32 num_frames = 0;
-		hr = w.audio_client->GetBufferSize(&num_frames);
+		hr = audio_client->GetBufferSize(&num_frames);
 		EXIT_ON_ERROR(hr)
-		w.req_buffer_duration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC / w.wave_format->Format.nSamplesPerSec * num_frames + 0.5);
-		hr = w.audio_client->Initialize(
+		req_buffer_duration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC / wave_format->Format.nSamplesPerSec * num_frames + 0.5);
+		hr = audio_client->Initialize(
 			AUDCLNT_SHAREMODE_SHARED,
 			WASAPI_STREAMFLAGS,
-			w.req_buffer_duration,
-			w.req_buffer_duration,
-			&w.wave_format->Format,
+			req_buffer_duration,
+			req_buffer_duration,
+			&wave_format->Format,
 			NULL);
 	}
 	EXIT_ON_ERROR(hr)
 
 	// Create empty event handler
-	w.event_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (w.event_handle == NULL) {
+	event_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (event_handle == NULL) {
 		hr = E_FAIL;
 	}
 	EXIT_ON_ERROR(hr);
 
 	// Set event handler
-	hr = w.audio_client->SetEventHandle(w.event_handle);
+	hr = audio_client->SetEventHandle(event_handle);
 	EXIT_ON_ERROR(hr);
 
 	// Get buffer size
-	hr = w.audio_client->GetBufferSize(&w.buffer_size);
+	hr = audio_client->GetBufferSize(&buffer_size);
 	EXIT_ON_ERROR(hr);
 
 	// Get audio render client
-	hr = w.audio_client->GetService(
+	hr = audio_client->GetService(
 		IID_IAudioRenderClient,
-		(void**)&w.render_client);
+		(void**)&render_client);
 	EXIT_ON_ERROR(hr);
 
 	// Get session control
-	hr = w.audio_client->GetService(
+	hr = audio_client->GetService(
 		IID_IAudioSessionControl,
-		(void**)&w.session_control);
+		(void**)&session_control);
 	EXIT_ON_ERROR(hr);
 	
 	// Get and release buffer, probably unnessecary in setup idk
-	hr = w.render_client->GetBuffer(w.buffer_size, &w.buffer);
+	hr = render_client->GetBuffer(buffer_size, &buffer);
 	EXIT_ON_ERROR(hr);
 	
-	hr = w.write_zeroes();
+	hr = write_zeroes();
 
-	hr = w.render_client->ReleaseBuffer(w.buffer_size, w.flags);
+	hr = render_client->ReleaseBuffer(buffer_size, flags);
 	EXIT_ON_ERROR(hr);
 
 	// Request high CPU priority
 	if (LOW_LATENCY_REQUEST) {
-		w.task_handle = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &w.task_index);
-		if (w.task_handle == NULL && FAIL_ON_LOW_LATENCY_DENIED) {
+		task_handle = AvSetMmThreadCharacteristics(TEXT("Pro Audio"), &task_index);
+		if (task_handle == NULL && FAIL_ON_LOW_LATENCY_DENIED) {
 			hr = E_FAIL;
 			EXIT_ON_ERROR(hr)
 		}
@@ -323,7 +320,7 @@ Exit:
 	if (FAILED(hr)) {
 		std::cout << "WASAPI runtime error: " << msg << std::endl;
 	}
-	w.shutdown();
+	shutdown();
 	return hr;
 }
 

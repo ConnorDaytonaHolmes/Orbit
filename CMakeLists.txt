@@ -22,11 +22,19 @@ add_executable(${PROJECT_NAME}
 	"src/util.h"
 	"src/wavplayer.cpp"
 	"src/wavplayer.h"
+	"src/driverinterface.cpp"
+	"src/driverinterface.h"
 )
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_compile_options(/EHsc /W3)
+
 
 #ASIO
 set(ASIO_sdk "asiosdk_2.3.3_2019-06-14")
 add_subdirectory(${ASIO_sdk})
+target_link_libraries(${PROJECT_NAME}
+	asiosdk
+)
 
 #INTERNAL
 add_subdirectory(src)
@@ -69,11 +77,13 @@ target_link_libraries(${PROJECT_NAME}
 set(WIN_INCLUDE "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.19041.0\\um")
 target_include_directories(${PROJECT_NAME} PUBLIC "${WIN_INCLUDE}")
 
-find_library(winmm_LIB_PATH winmm)
-target_link_libraries(${PROJECT_NAME} ${winmm_LIB_PATH})
-
-find_library(audioeng_LIB_PATH audioeng)
-target_link_libraries(${PROJECT_NAME} ${audioeng_LIB_PATH})
-
-find_library(avrt_LIB_PATH avrt)
-target_link_libraries(${PROJECT_NAME} ${avrt_LIB_PATH})
+find_library(winmm_LP winmm)
+find_library(audioeng_LP audioeng)
+find_library(avrt_LP avrt)
+find_library(thedevil audiobaseprocessingobject)
+target_link_libraries(${PROJECT_NAME}
+	${winmm_LP}
+	${audioeng_LP}
+	${avrt_LP}
+	${thedevil}
+)

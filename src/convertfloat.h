@@ -23,3 +23,4 @@ int16 to_int16msb(const float& d);
 int8 to_int8lsb(const float& d);
 int8 to_int8msb(const float& d);
 
+void float32_to_int32_in_place(float* buffer, long frames);

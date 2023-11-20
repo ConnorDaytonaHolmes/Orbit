@@ -1,11 +1,5 @@
 ﻿#include "asioconfig.h"
-
-ASIO asio;
-
-ASIO* get_asio() {
-	return &asio;
-}
-
+#include "asioconfig.h"
 
 long init_asio_static_data(ASIOInfo* info) {
 	//Get input/output channel info
@@ -22,7 +16,6 @@ long init_asio_static_data(ASIOInfo* info) {
 		info->inputChannels,
 		info->outputChannels
 	);
-
 	
 	for (int i = 0; i < info->inputChannels + info->outputChannels; i++) {
 		info->channelInfos[i].channel = info->bufferInfos[i].channelNum;
@@ -31,12 +24,6 @@ long init_asio_static_data(ASIOInfo* info) {
 		if (get_info_result != ASE_OK)
 			break;
 	}
-
-	/* --------- print all channel types
-	for (int i = 0; i < asio.info.inputChannels + asio.info.outputChannels; i++) {
-		printf("Channel %u sample type: %s\n", i, asio_sample_type_to_string.at(asio.info.channelInfos[i].type));
-	}
-	*/	
 
 	// ---------- Get buffer size info
 	ASIOError get_buffer_result = ASIOGetBufferSize(
@@ -160,124 +147,9 @@ const double twoRaisedTo32 = 4294967296.;
 #define ASIO64toDouble(a) ((a).lo + (a).hi * twoRaisedTo32)
 #endif
 
-
+static ASIO* g_asio;
 ASIOTime* bufferSwitchTimeInfo(ASIOTime* time_info, long index, ASIOBool processNow) {
-	static long processedSamples = 0;
-	asio.info.tInfo = *time_info;
-
-	if (time_info->timeInfo.flags & kSystemTimeValid)
-		asio.info.nanoSeconds = ASIO64toDouble(time_info->timeInfo.systemTime);
-	else
-		asio.info.nanoSeconds = 0;
-
-	if (time_info->timeInfo.flags & kSamplePositionValid)
-		asio.info.samples = ASIO64toDouble(time_info->timeInfo.samplePosition);
-	else
-		asio.info.samples = 0;
-
-	if (time_info->timeCode.flags & kTcValid)
-		asio.info.tcSamples = ASIO64toDouble(time_info->timeCode.timeCodeSamples);
-	else
-		asio.info.tcSamples = 0;
-
-	asio.info.sysRefTime = get_sys_reference_time();
-
-#if WINDOWS && _DEBUG
-	static double last_samples = 0;
-	char tmp[128];
-	sprintf(tmp, "diff: %d / %d ms / %d ms / %d samples				\n", 
-		asio.info.sysRefTime - (long)(asio.info.nanoSeconds / 1000000.0),
-		asio.info.sysRefTime, (long)(asio.info.nanoSeconds / 1000000.0), 
-		(long)(asio.info.samples - last_samples)
-	);
-	OutputDebugString(tmp);
-	last_samples = asio.info.samples;
-#endif
-
-	int buff_size = asio.info.preferredSize; // in samples
-	int sample_length;
-	asio.get_master_buffer()->prepare_output();
-	asio.get_master_buffer()->process_output();
-	const void* const master_buffer = asio.get_master_buffer()->get_buffer();	
-	for (int i : {OUTPUT_1, OUTPUT_2}) {
-		int channel = i - (OUTPUT_1);
-		switch (asio.info.channelInfos[i].type) {
-		case ASIOSTInt16LSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 2);
-			break;
-		case ASIOSTInt24LSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 3);
-			break;
-		case ASIOSTInt32LSB:
-		{
-			sample_length = 4;// sample length SUCCESS :)
-			//FOCUSRITE USB AUDIO
-			int* asio_int32 = (int*)(asio.info.bufferInfos[i].buffers[index]);
-			int* master_int32 = (int*)master_buffer;
-			for (int sample_idx = 0; sample_idx < buff_size; sample_idx ++) {
-				int value = master_int32[sample_idx * 2 + channel];
-				asio_int32[sample_idx] = value;
-			}
-			/*
-			memcpy(
-				asio.info.bufferInfos[i].buffers[index],
-				asio.get_master_buffer()->get_buffer(),
-				buff_size * 4
-			);
-			*/
-			//memset(asio.info.bufferInfos[i].buffers[index], 0, buffSize * 4);
-			break;
-		}
-		case ASIOSTFloat32LSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 4);
-			break;
-		case ASIOSTFloat64LSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 8);
-			break;
-		case ASIOSTInt32LSB16:		// 32 bit data with 16 bit alignment
-		case ASIOSTInt32LSB18:		// 32 bit data with 18 bit alignment
-		case ASIOSTInt32LSB20:		// 32 bit data with 20 bit alignment
-		case ASIOSTInt32LSB24:		// 32 bit data with 24 bit alignment
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 4);
-			break;
-		case ASIOSTInt16MSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 2);
-			break;
-		case ASIOSTInt24MSB:		// used for 20 bits as well
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 3);
-			break;
-		case ASIOSTInt32MSB:
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 4);
-			break;
-		case ASIOSTFloat32MSB:		// IEEE 754 32 bit float, as found on Intel x86 architecture
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 4);
-			break;
-		case ASIOSTFloat64MSB: 		// IEEE 754 64 bit float float, as found on Intel x86 architecture
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 8);
-			break;
-
-			// these are used for 32 bit data buffer, with different alignment of the data inside
-			// 32 bit PCI bus systems can more easily used with these
-		case ASIOSTInt32MSB16:		// 32 bit data with 18 bit alignment
-		case ASIOSTInt32MSB18:		// 32 bit data with 18 bit alignment
-		case ASIOSTInt32MSB20:		// 32 bit data with 20 bit alignment
-		case ASIOSTInt32MSB24:		// 32 bit data with 24 bit alignment
-			memset(asio.info.bufferInfos[i].buffers[index], 0, buff_size * 4);
-			break;
-		}
-	}
-
-	asio.get_master_buffer()->clear_buffer();
-
-	if (asio.info.postOutput)
-		ASIOOutputReady();
-
-	if (processedSamples >= asio.info.sampleRate * TEST_RUN_TIME)	// roughly measured
-		asio.info.stopped = true;
-	else
-		processedSamples += buff_size;
-
-	return 0L;
+	return g_asio->m_bufferSwitchTimeInfo(time_info, index, processNow);
 }
 
 void bufferSwitch(long index, ASIOBool processNow) {
@@ -327,7 +199,7 @@ long asioMessages(long selector, long value, void* message, double* opt) {
 		// You cannot reset the driver right now, as this code is called from the driver.
 		// Reset the driver is done by completely destruct is. I.e. ASIOStop(), ASIODisposeBuffers(), Destruction
 		// Afterwards you initialize the driver again.
-		asio.info.stopped;  // In this sample the processing will just stop
+		g_asio->info.stopped;  // In this sample the processing will just stop
 		ret = 1L;
 		break;
 	case kAsioResyncRequest:
@@ -379,6 +251,60 @@ ASIO::~ASIO() {
 	shutdown();
 }
 
+ASIOTime* ASIO::m_bufferSwitchTimeInfo(ASIOTime* time_info, long index, ASIOBool processNow) {
+
+#pragma region TIMEINFO
+	
+	static long processedSamples = 0;
+	info.tInfo = *time_info;
+
+	if (time_info->timeInfo.flags & kSystemTimeValid)
+		info.nanoSeconds = ASIO64toDouble(time_info->timeInfo.systemTime);
+	else
+		info.nanoSeconds = 0;
+
+	if (time_info->timeInfo.flags & kSamplePositionValid)
+		info.samples = ASIO64toDouble(time_info->timeInfo.samplePosition);
+	else
+		info.samples = 0;
+
+	if (time_info->timeCode.flags & kTcValid)
+		info.tcSamples = ASIO64toDouble(time_info->timeCode.timeCodeSamples);
+	else
+		info.tcSamples = 0;
+
+	info.sysRefTime = get_sys_reference_time();
+
+#if WINDOWS && _DEBUG
+	static double last_samples = 0;
+	char tmp[128];
+	sprintf(tmp, "diff: %d / %d ms / %d ms / %d samples				\n",
+		info.sysRefTime - (long)(info.nanoSeconds / 1000000.0),
+		info.sysRefTime, (long)(info.nanoSeconds / 1000000.0),
+		(long)(info.samples - last_samples)
+	);
+	OutputDebugString(tmp);
+	last_samples = info.samples;
+#endif
+
+#pragma endregion TIMEINFO
+
+	buffer_callback(
+		info.bufferInfos[OUTPUT_1].buffers[index],
+		info.bufferInfos[OUTPUT_2].buffers[index]
+	);
+
+	if (info.postOutput)
+		ASIOOutputReady();
+
+	if (processedSamples >= info.sampleRate * TEST_RUN_TIME)	// roughly measured
+		info.stopped = true;
+	else
+		processedSamples += info.preferredSize;
+
+	return 0L;
+}
+
 void ASIO::shutdown() {
 	dispose_driver_names();
 	ASIOStop();
@@ -397,8 +323,9 @@ long ASIO::load_driver(char* driver_name) {
 }
 
 long ASIO::init(char* driver_name) {
+	initialized = false;
 	// Load driver
-	long load_driver_result = asio.load_driver(driver_name);
+	long load_driver_result = load_driver(driver_name);
 	if (load_driver_result != HOST_OK) {
 		print_host_error(load_driver_result);
 		return load_driver_result;
@@ -441,6 +368,8 @@ long ASIO::init(char* driver_name) {
 	}
 
 	printf("ASIO Driver initialized successfully.\n");
+	initialized = true;
+	g_asio = this;
 	return HOST_OK;
 }
 
@@ -480,4 +409,10 @@ void ASIO::dispose_driver_names() {
 		free(driver_name_block);
 	}
 	driver_name_block = nullptr;
+}
+
+char* ASIO::get_driver_name(int index) {
+	if (!driver_name_block || index >= number_of_available_drivers)
+		return nullptr;
+	return driver_names[index];
 }

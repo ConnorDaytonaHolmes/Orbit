@@ -1,5 +1,6 @@
 #include "oscillator.h"
 #include <engine/masterbuffer.h>
+#include <engine.h>
 
 osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate, wt::Wavetable* wt)
 : Oscillator(num_channels, buffer_size, sample_rate) {
@@ -61,7 +62,7 @@ void osc::Oscillator::process_output() {
 	}
 }
 
-wt::WavetableCollection* oscillator_test(MasterBuffer* mb) {
+wt::WavetableCollection* oscillator_test(AudioEngine* e) {
 	// Load wt library
 	wt::WavetableCollection* wt_lib = load_wavetable_library();
 	if (!wt_lib)
@@ -82,14 +83,14 @@ wt::WavetableCollection* oscillator_test(MasterBuffer* mb) {
 		osc::Oscillator* o =
 			new osc::Oscillator(
 				2,
-				mb->out.size,
-				mb->_sample_rate
+				e->master->out.size,
+				e->master->_sample_rate
 			);
 		o->volume = 1.0f / frequencies.size();
 		o->set_wavetable(test_wavetable);
 		o->set_hz(frequencies[i]);
 		o->clear_buffer();
-		mb->mixer.get()->get_mixer_track(1)->assign_input(o);
+		e->mixer.get()->get_mixer_track(1)->assign_input(o);
 		oscillators.push_back(o);
 	}
 

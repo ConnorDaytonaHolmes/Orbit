@@ -100,3 +100,11 @@ int8 to_int8msb(const float& f) {
 	int8 lsb = to_int8lsb(f);
 	return bit_reverse_table_256[lsb];
 };
+
+const double fScaler32 = (double)0x7fffffffL;
+void float32_to_int32_in_place(float* buffer, long frames) {
+	double sc = fScaler32 + .49999;
+	long* b = (long*)buffer;
+	while (--frames >= 0)
+		*b++ = (long)((double)(*buffer++) * sc);
+}
