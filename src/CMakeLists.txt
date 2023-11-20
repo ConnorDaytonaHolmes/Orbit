@@ -50,12 +50,12 @@ add_library(wav
 target_include_directories(wav PUBLIC "wav")
 
 add_library(wavetable
-	"wavetables/saw.h"
-	"wavetables/sine.h"
-	"wavetables/square.h"
-	"wavetables/wavetable.cpp"
-	"wavetables/wavetable.h"
-	"wavetables/wavetablecollection.cpp"
-	"wavetables/wavetablecollection.h"
+	"wavetable/saw.h"
+	"wavetable/sine.h"
+	"wavetable/square.h"
+	"wavetable/wavetable.cpp"
+	"wavetable/wavetable.h"
+	"wavetable/wavetablecollection.cpp"
+	"wavetable/wavetablecollection.h"
 )
-target_include_directories(wavetable PUBLIC "wavetables")
+target_include_directories(wavetable PUBLIC "wavetable")

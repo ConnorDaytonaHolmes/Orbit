@@ -70,7 +70,7 @@ float clamp_0_1(float value) {
 }
 
 float clamp_n1_1(float value) {
-	//return value <= -1.0 ? -1.0 : value >= 1.0 ? 1.0 : value;
+	return value <= -1.0 ? -1.0 : value >= 1.0 ? 1.0 : value;
 	
 	long a = *(long*)&value; // float as bits
 	long exp = a & f_exp_mask;

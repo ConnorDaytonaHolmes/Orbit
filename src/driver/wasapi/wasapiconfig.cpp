@@ -17,8 +17,6 @@ const bool LOW_LATENCY_REQUEST = true;
 const bool FAIL_ON_LOW_LATENCY_DENIED = true;
 
 
-
-
 HRESULT WASAPISession::write_data(MasterBuffer* const master, UINT32 frames_requested) {	
 	// If buffer is fresh, process master buffer
 	if (!is_master_processed) {

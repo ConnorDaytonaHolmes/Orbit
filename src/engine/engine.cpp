@@ -8,7 +8,7 @@ AudioEngine::~AudioEngine() {
 
 void AudioEngine::configure(SampleType st, uint32_t buffer_size, double sample_rate) {
 	master = std::make_shared<MasterBuffer>(st, buffer_size, sample_rate);
-	master->volume = 0.1f;
+	master->volume = 0.5f;
 	
 	mixer = std::make_shared<Mixer>(buffer_size, sample_rate);
 	mixer->routing_table.assign_route(0, 1, 1.0f);
@@ -28,17 +28,9 @@ bool AudioEngine::start() {
 	}	
 	running = true;
 
-	WAVPlayer* wp = new WAVPlayer(audio_settings.buffer_size, audio_settings.sample_rate);
-	//wp->load(".audio/realquick.wav");
-	wp->load(".audio/sauvage.wav");
-	//wp->load(".audio/440boop.wav");
-	wp->volume = 1.0f;
-	wp->set_loop(true);
-	if (wp->is_loaded()) {
-		mixer->get_mixer_track(1)->assign_input(wp);
-		wp->play();
-	}
-	//wt::WavetableCollection* lib = oscillator_test(master_buffer);
+	
+
+	
 
 	if (on_audio_engine_start != nullptr)
 		on_audio_engine_start();

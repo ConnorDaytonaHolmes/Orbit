@@ -1,9 +1,10 @@
 #pragma once
 #include <algorithm>
-#include "wavetables/wavetable.h"
+#include "wavetable/wavetable.h"
 #include "engine/iaudiooutput.h"
-#include <engine/masterbuffer.h>
-#include <wavetables/wavetablecollection.h>
+#include <masterbuffer.h>
+#include <wavetable/wavetablecollection.h>
+#include <engine.h>
 
 const double MINIMUM_HZ = 0.01;
 const double MAXIMUM_HZ = 20000.0f;
@@ -30,4 +31,4 @@ namespace osc {
 	};
 }
 
-wt::WavetableCollection* oscillator_test(MasterBuffer* mb);
+wt::WavetableCollection* oscillator_test(AudioEngine* e);

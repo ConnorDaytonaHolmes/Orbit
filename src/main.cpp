@@ -16,7 +16,7 @@
 #include "env_32_64.h" //32/64-bit helper
 #include "util.h"
 
-#include "wavetables/wavetablecollection.h"
+#include "wavetable/wavetablecollection.h"
 #include "oscillator.h"
 #include "driver/asio/asioconfig.h"
 #include "asio.h"
@@ -52,6 +52,22 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
 	spec.Name = "Orbit";
 	//spec.CustomTitlebar = true;
 	audio_thread = std::thread(&AudioEngine::start, &engine);
+
+	
+	WAVPlayer* wp = new WAVPlayer(engine.audio_settings.buffer_size, engine.audio_settings.sample_rate);
+	//wp->load(".audio/realquick.wav");
+	wp->load(".audio/sauvage.wav");
+	//wp->load(".audio/440boop.wav");
+	wp->volume = 1.0f;
+	wp->set_loop(true);
+	if (wp->is_loaded()) {
+		engine.mixer->get_mixer_track(1)->assign_input(wp);
+		wp->play();
+	}
+
+	//wavetable::WavetableCollection* lib = oscillator_test(&engine);
+
+
 	Walnut::Application* app = new Walnut::Application(spec);
 	app->PushLayer<ExampleLayer>();
 	app->SetMenubarCallback([app]() {

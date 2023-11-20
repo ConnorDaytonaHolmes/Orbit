@@ -97,10 +97,15 @@ void DriverInterface::asio_callback(void* left, void* right) {
 
 	int sample_size = engine->audio_settings.sample_size;
 	const void* const master_buffer = engine->master->get_buffer();
-	
-	for (int sample_idx = 0; sample_idx < engine->audio_settings.buffer_size; sample_idx += 2) {
+		
+
+	for (int sample_idx = 0; sample_idx < engine->audio_settings.buffer_size / 2; sample_idx++) {
+		((int*)left)[sample_idx] = ((int*)master_buffer)[2 * sample_idx];
+		((int*)right)[sample_idx] = ((int*)master_buffer)[2 * sample_idx + 1];
+		/*
 		memcpy((byte*)left + sample_idx, (byte*)master_buffer + sample_idx, sample_size);
 		memcpy((byte*)right + sample_idx, (byte*)master_buffer + sample_idx + sample_size, sample_size);
+		*/
 	}
 
 	/*

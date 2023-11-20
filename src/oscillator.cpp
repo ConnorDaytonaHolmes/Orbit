@@ -78,7 +78,7 @@ wt::WavetableCollection* oscillator_test(AudioEngine* e) {
 	}
 
 	std::vector<osc::Oscillator*> oscillators{};   // notes F#, A#, C#, F, G#
-	std::vector<double> frequencies { 64.0, 128.0, 256.0, 512.0 };// , 369.0, 466.0, 554.0, 698.0, 830.0 };
+	std::vector<double> frequencies { 50.0, 100.0, 200.0 };// , 369.0, 466.0, 554.0, 698.0, 830.0 };
 	for (int i = 0; i < frequencies.size(); i++) {
 		osc::Oscillator* o =
 			new osc::Oscillator(
