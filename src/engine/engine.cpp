@@ -16,9 +16,7 @@ void AudioEngine::configure(SampleType st, uint32_t buffer_size, double sample_r
 	audio_settings.sample_size = get_sample_size_in_bytes(st);
 	audio_settings.buffer_size = buffer_size;
 	audio_settings.sample_rate = sample_rate;
-	configured = true;
-
-	
+	configured = true;	
 }
 
 bool AudioEngine::start() {
@@ -27,10 +25,6 @@ bool AudioEngine::start() {
 		return false;
 	}	
 	running = true;
-
-	
-
-	
 
 	if (on_audio_engine_start != nullptr)
 		on_audio_engine_start();

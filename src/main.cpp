@@ -31,50 +31,71 @@ namespace wt = wavetable;
 void asio_test_loop(ASIOInfo* asio_info);
 HRESULT wasapi_test_loop(WASAPISession* wasapi, MasterBuffer* mb);
 
-class ExampleLayer : public Walnut::Layer {
-public:
-	virtual void OnUIRender() override {
-		ImGui::Begin("Hello");
-		ImGui::Button("Button");
-		ImGui::End();
 
-		ImGui::ShowDemoWindow();
+class AudioLayer : public Walnut::Layer {
+public:
+	AudioEngine engine;
+	DriverInterface di;
+	std::thread audio_thread;
+	WAVPlayer* wp;
+
+	virtual void OnAttach() override {
+		di.initialize(&engine, Walnut::Application::Get().GetWindowHandle());
+		audio_thread = std::thread(&AudioEngine::start, &engine);
+
+		wp = new WAVPlayer(engine.audio_settings.buffer_size, engine.audio_settings.sample_rate);
+		//wp->load(".audio/realquick.wav");
+		wp->load(".audio/sauvage.wav");
+		//wp->load(".audio/440boop.wav");
+		wp->volume = 1.0f;
+		wp->set_loop(true);
+		if (wp->is_loaded()) {
+			engine.mixer->get_mixer_track(1)->assign_input(wp);
+		}
+		//wavetable::WavetableCollection* lib = oscillator_test(&engine);
+	}
+
+	virtual void OnDetach() override {
+		di.shutdown_drivers();
+		engine.shutdown();
+		audio_thread.join();
+	}
+
+	virtual void OnUIRender() override {
+		ImGui::Begin("WAVPlayer");
+
+		if(ImGui::Button("Play"))
+			wp->play();
+
+		
+		if (wp->is_paused()) {
+			if (ImGui::Button("Unpause")) {
+				wp->unpause();
+			}
+		}
+		else {
+			if (ImGui::Button("Pause")) {
+				wp->pause();
+			}
+		}
+
+		if (ImGui::Button("Stop"))
+			wp->stop();
+
+		ImGui::End();
 	}
 };
-
-std::thread audio_thread;
-AudioEngine engine;
-DriverInterface di(&engine);
-
 
 Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
 	Walnut::ApplicationSpecification spec;
 	spec.Name = "Orbit";
 	//spec.CustomTitlebar = true;
-	audio_thread = std::thread(&AudioEngine::start, &engine);
-
-	
-	WAVPlayer* wp = new WAVPlayer(engine.audio_settings.buffer_size, engine.audio_settings.sample_rate);
-	//wp->load(".audio/realquick.wav");
-	wp->load(".audio/sauvage.wav");
-	//wp->load(".audio/440boop.wav");
-	wp->volume = 1.0f;
-	wp->set_loop(true);
-	if (wp->is_loaded()) {
-		engine.mixer->get_mixer_track(1)->assign_input(wp);
-		wp->play();
-	}
-
-	//wavetable::WavetableCollection* lib = oscillator_test(&engine);
-
 
 	Walnut::Application* app = new Walnut::Application(spec);
-	app->PushLayer<ExampleLayer>();
+	app->PushLayer<AudioLayer>();
 	app->SetMenubarCallback([app]() {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Exit")) {
-				engine.shutdown();
-				audio_thread.join();
 				app->Close();
 			}
 			ImGui::EndMenu();

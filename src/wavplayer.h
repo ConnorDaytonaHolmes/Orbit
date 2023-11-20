@@ -19,6 +19,7 @@ public:
 
 	bool is_loaded() { return loaded; }
 	bool is_playing() { return playing; }
+	bool is_paused() { return paused; }
 	bool is_looping() {	return loop; }
 	void set_loop(bool loop) {
 		this->loop = loop;
@@ -31,6 +32,7 @@ private:
 	std::shared_ptr<float> wav_data;
 	uint32_t playback_index;
 	bool playing;
+	bool paused;
 	bool loop;
 	bool loaded;
 };

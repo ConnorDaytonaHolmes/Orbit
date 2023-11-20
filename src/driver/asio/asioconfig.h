@@ -113,6 +113,7 @@ public:
 
 	ASIOTime* m_bufferSwitchTimeInfo(ASIOTime* params, long doubleBufferIndex, ASIOBool directProcess);
 	bool initialized = false;
+	bool stopped = false;
 
 private:
 	// Returns a HostError (FailedToLoadASIODriver or HOST_OK)

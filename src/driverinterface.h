@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "wasapi/wasapiconfig.h"
 #include "asio/asioconfig.h"
+#include <GLFW/glfw3.h>
 
 enum class AudioDriverType {
 	INVALID,
@@ -46,13 +47,14 @@ struct DeviceDetails {
 
 class DriverInterface {
 public:
-	DriverInterface(AudioEngine* _engine);
-	~DriverInterface();
 	DeviceDetails* current_device;
 	ASIO asio {};
 	WASAPISession wasapi {};
 	AudioEngine* engine;
+	void* window_handle;
 
+	void initialize(AudioEngine* engine, void* w_handle);
+	void shutdown_drivers();
 	void asio_callback(void* left, void* right); // separate
 	void wasapi_callback(void* buffer); // interleaved
 	long start_driver();

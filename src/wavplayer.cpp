@@ -47,20 +47,24 @@ void WAVPlayer::process_output() {
 void WAVPlayer::play() {
 	playback_index = 0;
 	playing = true;
+	paused = false;
 }
 
 void WAVPlayer::stop() {
 	pause();
+	paused = false;
 	playback_index = 0;
 }
 
 void WAVPlayer::pause() {
 	playing = false;
+	paused = true;
 	clear_buffer();
 }
 
 void WAVPlayer::unpause() {
 	playing = true;
+	paused = false;
 }
 
 void WAVPlayer::seek(uint32_t to_index) {

@@ -4,13 +4,23 @@
 
 DriverInterface* di;
 
-DriverInterface::DriverInterface(AudioEngine* _engine) : engine(_engine) {
+void DriverInterface::wasapi_callback(void* buffer) {
+	// todo
+}
+
+void DriverInterface_wasapi_callback(void* buffer) {
+	di->wasapi_callback(buffer);
+}
+
+void DriverInterface::initialize(AudioEngine* a_engine, void* w_handle) {
+	window_handle = w_handle;
+	engine = a_engine;
 	di = this;
 	SampleType sample_type;
 	uint32_t buffer_size;
 	double sample_rate;
 	current_device = nullptr;
-	
+	asio.info.driver_info.sysRef = window_handle;
 	bool has_asio = asio.retrieve_driver_names();
 	if (has_asio) {
 		asio.print_driver_names();
@@ -23,7 +33,7 @@ DriverInterface::DriverInterface(AudioEngine* _engine) : engine(_engine) {
 			devices.emplace_back(
 				AudioDriverType::ASIO,
 				asio.info.driver_info.name,
-				0, 
+				0,
 				buffer_size,
 				asio.info.inputChannels,
 				asio.info.outputChannels,
@@ -32,8 +42,8 @@ DriverInterface::DriverInterface(AudioEngine* _engine) : engine(_engine) {
 				sample_rate,
 				true
 			);
-			current_device = &*(devices.end()-1);
-			
+			current_device = &*(devices.end() - 1);
+
 		}
 		else {
 			print_host_error(init_asio_result);
@@ -56,21 +66,15 @@ DriverInterface::DriverInterface(AudioEngine* _engine) : engine(_engine) {
 	asio.buffer_callback = &DriverInterface_asio_callback;
 	// TODO do same with wasapi
 
+	ASIOError show_cpanel = ASIOControlPanel();
+
 	engine->on_audio_engine_start = &DriverInterface_start_driver;
 	engine->configure(sample_type, buffer_size, sample_rate);
 }
 
-DriverInterface::~DriverInterface() {
+void DriverInterface::shutdown_drivers() {
 	asio.shutdown();
 	wasapi.shutdown();
-}
-
-void DriverInterface::wasapi_callback(void* buffer) {
-	// todo
-}
-
-void DriverInterface_wasapi_callback(void* buffer) {
-	di->wasapi_callback(buffer);
 }
 
 void DriverInterface::asio_callback(void* left, void* right) {
@@ -97,21 +101,11 @@ void DriverInterface::asio_callback(void* left, void* right) {
 
 	int sample_size = engine->audio_settings.sample_size;
 	const void* const master_buffer = engine->master->get_buffer();
-		
 
 	for (int sample_idx = 0; sample_idx < engine->audio_settings.buffer_size / 2; sample_idx++) {
 		((int*)left)[sample_idx] = ((int*)master_buffer)[2 * sample_idx];
 		((int*)right)[sample_idx] = ((int*)master_buffer)[2 * sample_idx + 1];
-		/*
-		memcpy((byte*)left + sample_idx, (byte*)master_buffer + sample_idx, sample_size);
-		memcpy((byte*)right + sample_idx, (byte*)master_buffer + sample_idx + sample_size, sample_size);
-		*/
 	}
-
-	/*
-	memcpy((byte*)left, (byte*)master_buffer, sample_size * engine->audio_settings.buffer_size / 2);
-	memcpy((byte*)right, (byte*)master_buffer + sample_size * engine->audio_settings.buffer_size / 2, sample_size * engine->audio_settings.buffer_size / 2);
-	*/
 
 	engine->master->prepare_output();
 }

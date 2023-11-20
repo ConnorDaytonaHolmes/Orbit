@@ -1,5 +1,5 @@
 ﻿#include "asioconfig.h"
-#include "asioconfig.h"
+#include "asio_util.h"
 
 long init_asio_static_data(ASIOInfo* info) {
 	//Get input/output channel info
@@ -153,6 +153,8 @@ ASIOTime* bufferSwitchTimeInfo(ASIOTime* time_info, long index, ASIOBool process
 }
 
 void bufferSwitch(long index, ASIOBool processNow) {
+	if (g_asio->stopped)
+		return;
 	// the actual processing callback.
 	// Beware that this is normally in a seperate thread, hence be sure that you take care
 	// about thread synchronization. This is omitted here for simplicity.
@@ -307,9 +309,30 @@ ASIOTime* ASIO::m_bufferSwitchTimeInfo(ASIOTime* time_info, long index, ASIOBool
 
 void ASIO::shutdown() {
 	dispose_driver_names();
-	ASIOStop();
-	ASIODisposeBuffers();
-	ASIOExit();
+	ASIOError stop = ASIOStop();
+	if (stop != ASE_OK) {
+		std::cout << "ASIO failed to stop." << std::endl;
+		print_asio_error(stop);
+	}
+	stopped = true;
+
+	/*----------------------------------------------------------------------------*/
+	/* ASIODisposeBuffers() throws an internal error (from inside the driver dll) */
+	/* not gonna call for now. idk */
+	/*------------------------------------------------------------------------
+	ASIOError dispose = ASIODisposeBuffers();
+	if (dispose != ASE_OK) {
+		std::cout << "ASIO failed to dispose buffers." << std::endl;
+		print_asio_error(dispose);
+	}
+	---------------------------------------------------------------------------*/
+	/*----
+	ASIOError exit = ASIOExit();
+	if (exit != ASE_OK) {
+		std::cout << "ASIO failed to exit." << std::endl;
+		print_asio_error(exit);
+	}
+	-----*/
 }
 
 long ASIO::load_driver(char* driver_name) {
