@@ -10,10 +10,10 @@ RoutingTable::RoutingTable() {
 	}
 	
 	// Set every non-master output to go to the master channel input at 100% volume by default
-	/*
+	
 	for (int out = 1; out < MAX_MIXER_TRACKS; out++) {
 		assign_route(0, out, 1.0);
-	}	*/
+	}
 }
 
 const float& RoutingTable::get_volume(int input_id, int output_id) {

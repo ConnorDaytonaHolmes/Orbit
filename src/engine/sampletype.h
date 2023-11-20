@@ -38,30 +38,5 @@ enum SampleType : long {
 
 	UNSUPPORTED
 };
-#ifndef _STBS_MAP_
-#define _STBS_MAP_
-static std::unordered_map<long, uint16_t> sample_type_byte_sizes = {
-	{ Int16MSB, 2},
-	{ Int24MSB, 3},
-	{ Int32MSB, 4},
-	{ Float32MSB, 4},
-	{ Float64MSB, 8},
-	{ Int32MSB16, 4},
-	{ Int32MSB18, 4},
-	{ Int32MSB20, 4},
-	{ Int32MSB24, 4},
-	{ Int16LSB, 2},
-	{ Int24LSB, 3},
-	{ Int32LSB, 4},
-	{ Float32LSB, 4},
-	{ Float64LSB, 8},
-	{ Int32LSB16, 4},
-	{ Int32LSB18, 4},
-	{ Int32LSB20, 4},
-	{ Int32LSB24, 4},
-	{ DSDInt8LSB1, 1},
-	{ DSDInt8MSB1, 1},
-	{ DSDInt8NER8, 1},
-	{ UNSUPPORTED, 0}
-};
-#endif
+
+uint16_t get_sample_size_in_bytes(SampleType sample_type);

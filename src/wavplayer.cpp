@@ -13,7 +13,7 @@ WAVPlayer::WAVPlayer(int buffer_size, double sample_rate)
 WAVPlayer::~WAVPlayer() {
 	stop();
 }
-float* where_data = nullptr;
+
 void WAVPlayer::process_output() {
 	if (!playing || !loaded || volume == 0.0f) {
 		return;
@@ -21,12 +21,7 @@ void WAVPlayer::process_output() {
 
 	float* f_out = out.buf.get();
 	float* f_wav = wav_data.get();
-	if(!where_data)
-		where_data = f_wav;
 	if (loop) {
-		if (where_data != f_wav) {
-			long a = 5;
-		}
 		for (int i = 0; i < out.size; i++) {
 			float data_val = f_wav[playback_index++];
 			f_out[i] = data_val * volume;

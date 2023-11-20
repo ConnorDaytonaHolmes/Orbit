@@ -22,6 +22,7 @@ void IAudioChannel::process_output() {
 	//TODO: process with VST plugins & scale volume
 	// for now, just copy
 	out.copy_from(&in);
+
 }
 
 void IAudioChannel::set_sample_rate(double sr) {

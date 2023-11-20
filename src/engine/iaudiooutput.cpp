@@ -13,7 +13,7 @@ IAudioOutput::~IAudioOutput() {
 }
 
 void IAudioOutput::prepare_output() {
-	clear_buffer();
+	IAudioOutput::clear_buffer();
 	output_ready = false;
 }
 

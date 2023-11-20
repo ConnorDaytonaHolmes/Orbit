@@ -13,14 +13,12 @@ void AudioEngine::configure(SampleType st, uint32_t buffer_size, double sample_r
 	mixer = std::make_shared<Mixer>(buffer_size, sample_rate);
 	mixer->routing_table.assign_route(0, 1, 1.0f);
 	audio_settings.sample_type = st;
-	audio_settings.sample_size = sample_type_byte_sizes.at(st);
+	audio_settings.sample_size = get_sample_size_in_bytes(st);
 	audio_settings.buffer_size = buffer_size;
 	audio_settings.sample_rate = sample_rate;
 	configured = true;
 
 	
-
-	//wt::WavetableCollection* lib = oscillator_test(master_buffer);
 }
 
 bool AudioEngine::start() {
@@ -30,15 +28,17 @@ bool AudioEngine::start() {
 	}	
 	running = true;
 
-	WAVPlayer wp(audio_settings.buffer_size, audio_settings.sample_rate);
-	wp.load(".audio/realquick.wav");
-	//wp.load(".audio/440boop.wav");
-	wp.volume = 1.0f;
-	wp.set_loop(true);
-	if (wp.is_loaded()) {
-		mixer->get_mixer_track(1)->assign_input(&wp);
-		wp.play();
+	WAVPlayer* wp = new WAVPlayer(audio_settings.buffer_size, audio_settings.sample_rate);
+	//wp->load(".audio/realquick.wav");
+	wp->load(".audio/sauvage.wav");
+	//wp->load(".audio/440boop.wav");
+	wp->volume = 1.0f;
+	wp->set_loop(true);
+	if (wp->is_loaded()) {
+		mixer->get_mixer_track(1)->assign_input(wp);
+		wp->play();
 	}
+	//wt::WavetableCollection* lib = oscillator_test(master_buffer);
 
 	if (on_audio_engine_start != nullptr)
 		on_audio_engine_start();
@@ -72,14 +72,13 @@ void AudioEngine::shutdown() {
 }
 
 void AudioEngine::transfer_mixer_to_master() {
-	master->clear_buffer();
 	if (mixer->volume == 0.0f)
 		return;
-
+	mixer->prepare_output();
 	const float* mixer_output = mixer->get_output();
 	float* out_buffer = (float*)master->get_output();
 	for (unsigned int i = 0; i < audio_settings.buffer_size; i++) {
-		out_buffer[i] = clamp_n1_1(mixer_output[i]) * master->volume;
+		out_buffer[i] = mixer_output[i] * master->volume;
 	}
 
 	// Convert float32 samples to output sample type
@@ -100,5 +99,7 @@ void AudioEngine::transfer_mixer_to_master() {
 		break;
 	}
 	}
-	mixer->prepare_output();
+	master->output_ready = true;
+	
+	mixer->clear_buffer();
 }

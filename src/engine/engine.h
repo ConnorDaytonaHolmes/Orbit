@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 using namespace std::chrono_literals;
-static constexpr std::chrono::microseconds wait_time = 100us;
+static constexpr std::chrono::microseconds wait_time = 5us;
 
 class AudioEngine {
 public:
@@ -25,7 +25,7 @@ public:
 	struct {
 		SampleType sample_type;
 		uint8_t sample_size; // in BYTES
-		uint32_t buffer_size;
+		uint32_t buffer_size; // in FRAMES
 		double sample_rate;
 	} audio_settings;
 	

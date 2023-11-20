@@ -35,6 +35,7 @@ void Mixer::prepare_output() {
 
 void Mixer::clear_buffer() {
 	IAudioOutput::clear_buffer();
+	
 	for (int i = 0; i < MAX_MIXER_TRACKS; i++) {
 		IAudioChannel* c = &_tracks[i];
 		c->clear_buffer();

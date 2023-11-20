@@ -1,4 +1,6 @@
 #include "parsewav.h"
+#include <vector>
+#include <iostream>
 
 
 std::shared_ptr<float> parse_wav_file(FILE* in, _Out_ WAVHeader* header) {
@@ -16,7 +18,21 @@ int get_header(FILE* in, _Out_ WAVHeader* header) {
 
 	if (riff_bytes_read > 0) {
 		// Reads the "FMT" header
+		
 		size_t fmt_id = fread(header->fmt, 4 * sizeof(uint8_t), 1, in);
+		std::string s = std::string((char*)&header->fmt[0], 3);
+		std::cout << "WAV chunk header: " << s << std::endl;
+		
+
+		while (s != "fmt" && s != "FMT") {
+			uint32_t skip = 0;
+			size_t _s = fread(&skip, sizeof(uint32_t), 1, in);
+			fseek(in, skip, SEEK_CUR);
+			fmt_id = fread(header->fmt, 4 * sizeof(uint8_t), 1, in);
+			s = std::string((char*)&header->fmt[0], 3);
+			std::cout << "WAV chunk header: " << s << std::endl;
+		}
+
 		// Reads the sub-chunk 1 size
 		size_t sub_ck1_size = fread(&header->sub_chunk_1_size, sizeof(uint32_t), 1, in);
 
@@ -33,6 +49,18 @@ int get_header(FILE* in, _Out_ WAVHeader* header) {
 		case 18:
 		{
 			size_t remaining_header_extra_size = fread(&header->audio_format, 1, 18, in);
+			switch (header->extra_data_size) {
+			case 0:
+				break;
+			case 22:
+				size_t extra_info = fread(&header->valid_bits_per_sample, 1, 22, in);
+				break;
+			}
+			break;
+		}
+		case 28:
+		{
+			size_t remaining_header_extra_size = fread(&header->audio_format, 1, 28, in);
 			switch (header->extra_data_size) {
 			case 0:
 				break;

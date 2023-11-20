@@ -35,6 +35,7 @@ add_library(engine
 	"engine/mixer.h"
 	"engine/route.cpp"
 	"engine/route.h"
+	"engine/sampletype.cpp"
 	"engine/sampletype.h"
 	"engine/engine.h"
 	"engine/engine.cpp"

@@ -1,9 +1,9 @@
 #include <string>
 #include <vector>
-#include "asio/asioconfig.h"
-#include "wasapi/wasapiconfig.h"
 #include <engine.h>
 #include <stdio.h>
+#include "wasapi/wasapiconfig.h"
+#include "asio/asioconfig.h"
 
 enum class AudioDriverType {
 	INVALID,
@@ -30,7 +30,7 @@ struct DeviceDetails {
 		bool		_active
 	) : type(_type), name(_name), id(_id), buffer_size(_buffer_size),
 		input_channels(_input_channels), output_channels(_output_channels),
-		sample_type(_sample_type), sample_size(_sample_size), active(_active)
+		sample_type(_sample_type), sample_size(_sample_size), sample_rate(_sample_rate), active(_active)
 	{}
 	AudioDriverType type; // Currently either ASIO or WASAPI or INVALID
 	std::string		name; //user friendly display name
@@ -55,9 +55,9 @@ public:
 
 	void asio_callback(void* left, void* right); // separate
 	void wasapi_callback(void* buffer); // interleaved
+	long start_driver();
 
 private:
-	long start_driver();
 
 	std::vector<DeviceDetails> devices;
 	class name_iterator : public std::iterator<
@@ -84,3 +84,4 @@ private:
 
 void DriverInterface_asio_callback(void* left, void* right);
 void DriverInterface_wasapi_callback(void* buffer);
+void DriverInterface_start_driver();
