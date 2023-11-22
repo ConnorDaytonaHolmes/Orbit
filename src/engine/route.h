@@ -12,7 +12,7 @@ struct RouteAssignment {
 	double volume; //should be between 0.0 and 1.0
 };*/
 
-constexpr int MAX_MIXER_TRACKS = 2;
+constexpr size_t MAX_MIXER_TRACKS = 2;
 
 // An IAudioInput is essentially an input to a mixer track
 // not sure yet if an input to each VST will be an IAudioInput, since

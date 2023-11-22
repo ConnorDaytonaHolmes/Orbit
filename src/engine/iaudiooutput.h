@@ -3,6 +3,7 @@
 #include <vector>
 #include <array>
 #include "audiobuffer.h"
+#include "audiosettings.h"
 
 constexpr int MAX_IAUDIO_OUTPUT = 256;
 
@@ -16,6 +17,7 @@ public:
 	float _panning;
 
 	IAudioOutput(int num_channels, int buffer_size, double sample_rate);
+	IAudioOutput(const AudioSettings& settings);
 	virtual ~IAudioOutput();
 	virtual const float* const get_output();
 	virtual void resize_buffer(int new_buffer_size);
@@ -30,5 +32,4 @@ public:
 	virtual void clip() {
 		out.clip();
 	}
-
 };

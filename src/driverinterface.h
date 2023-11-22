@@ -12,6 +12,8 @@ enum class AudioDriverType {
 	WASAPI
 };
 
+static constexpr bool PREFER_ASIO = false;
+
 // Handling driver/audio changes
 // OnSampleRateChange etc...
 // Layer of abstraction above WASAPI/ASIO
@@ -54,13 +56,19 @@ public:
 	void* window_handle;
 
 	void initialize(AudioEngine* engine, void* w_handle);
+	long init_asio();
+	HRESULT init_wasapi();
 	void shutdown_drivers();
 	void asio_callback(void* left, void* right); // separate
-	void wasapi_callback(void* buffer); // interleaved
+	void wasapi_callback(void* buffer, UINT32 frames_requested); // interleaved
 	long start_driver();
 
 private:
-
+	SampleType _sample_type;
+	uint32_t _buffer_size;
+	uint16_t _sample_size;
+	double _sample_rate;
+	
 	std::vector<DeviceDetails> devices;
 	class name_iterator : public std::iterator<
 		std::forward_iterator_tag,
@@ -81,9 +89,11 @@ private:
 	};
 	name_iterator begin() { return name_iterator(&devices, 0); }
 	name_iterator end() { return name_iterator(&devices, devices.size() - 1); }
+
+	static constexpr std::chrono::microseconds wait_for_master_buffer_time = 2000us;
 };
 
 
 void DriverInterface_asio_callback(void* left, void* right);
-void DriverInterface_wasapi_callback(void* buffer);
+void DriverInterface_wasapi_callback(void* buffer, UINT32 frames_requested);
 void DriverInterface_start_driver();

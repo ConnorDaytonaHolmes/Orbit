@@ -1,12 +1,7 @@
 #include "audiobuffer.h"
 #include "../util.h"
 
-
-AudioBuffer::AudioBuffer() {
-	size = 1;
-}
-
-AudioBuffer::AudioBuffer(unsigned int buffer_size) {
+AudioBuffer::AudioBuffer(uint32_t buffer_size) {
 	size = buffer_size;
 	std::shared_ptr<float> sp(new float[buffer_size] { 0.0f }, array_deleter<float>());
 	sp.swap(buf);
@@ -14,7 +9,7 @@ AudioBuffer::AudioBuffer(unsigned int buffer_size) {
 
 //Should probably check if use_count == 1, oh well
 
-void AudioBuffer::resize(unsigned int new_size) {
+void AudioBuffer::resize(uint32_t new_size) {
 	if (size == new_size)
 		return;
 

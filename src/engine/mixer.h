@@ -4,7 +4,7 @@
 
 class Mixer : public IAudioOutput {
 public:
-	Mixer(int buffer_size, double sample_rate);
+	Mixer(uint32_t buffer_size, double sample_rate);
 	RoutingTable routing_table;
 
 	const float* const get_output();
@@ -12,10 +12,10 @@ public:
 	void process_output() override;
 	void prepare_output() override;
 	void clear_buffer() override;
-	IAudioChannel* const get_mixer_track(int track_index) {
+	IAudioChannel* const get_track(int track_index) {
 		return &_tracks[track_index];
 	}
 
 private:
-	std::array<IAudioChannel, MAX_MIXER_TRACKS> _tracks;
+	std::vector<IAudioChannel> _tracks;
 };

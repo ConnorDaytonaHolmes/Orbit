@@ -10,6 +10,7 @@ add_library(driver
 	"driver/wasapi/wasapiconfig.h"
 	"driver/asio/asio_util.h"
 	"driver/asio/asio_util.cpp"
+	"driver/devicestate.h"
 )
 target_include_directories(driver PUBLIC
 	"driver"
@@ -39,6 +40,9 @@ add_library(engine
 	"engine/sampletype.h"
 	"engine/engine.h"
 	"engine/engine.cpp"
+	"engine/audiosettings.h"
+	"engine/igenerator.h"
+	"engine/igenerator.cpp"
 )
 target_include_directories(engine PUBLIC "engine")
 
@@ -59,3 +63,15 @@ add_library(wavetable
 	"wavetable/wavetablecollection.h"
 )
 target_include_directories(wavetable PUBLIC "wavetable")
+
+add_library(ui
+	"ui/wavplayer.h"
+	"ui/wavplayer.cpp"
+)
+target_include_directories(ui PUBLIC "ui")
+target_link_libraries(ui PUBLIC
+	engine
+	${imguiLib}
+	${WalnutLib}
+	${glfwLib}
+)

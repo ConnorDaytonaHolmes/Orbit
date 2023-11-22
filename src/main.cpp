@@ -22,67 +22,33 @@
 #include "asio.h"
 #include "driver/wasapi/wasapiconfig.h"
 #include "wav/parsewav.h"
-#include "wavplayer.h"
-#include "engine/sampletype.h"
+#include "sampler.h"
+#include <sampletype.h>
 #include <driverinterface.h>
+#include <wavplayer.h>
 
 namespace wt = wavetable;
 
 void asio_test_loop(ASIOInfo* asio_info);
 HRESULT wasapi_test_loop(WASAPISession* wasapi, MasterBuffer* mb);
 
-
+// maybe make a lil green icon bottom corner to show that everything is ok
+// some cpu usage / buffer underrun info too
 class AudioLayer : public Walnut::Layer {
 public:
-	AudioEngine engine;
+	AudioEngine& engine = AudioEngine::get_instance();
 	DriverInterface di;
 	std::thread audio_thread;
-	WAVPlayer* wp;
 
 	virtual void OnAttach() override {
 		di.initialize(&engine, Walnut::Application::Get().GetWindowHandle());
 		audio_thread = std::thread(&AudioEngine::start, &engine);
-
-		wp = new WAVPlayer(engine.audio_settings.buffer_size, engine.audio_settings.sample_rate);
-		//wp->load(".audio/realquick.wav");
-		wp->load(".audio/sauvage.wav");
-		//wp->load(".audio/440boop.wav");
-		wp->volume = 1.0f;
-		wp->set_loop(true);
-		if (wp->is_loaded()) {
-			engine.mixer->get_mixer_track(1)->assign_input(wp);
-		}
-		//wavetable::WavetableCollection* lib = oscillator_test(&engine);
 	}
 
 	virtual void OnDetach() override {
 		di.shutdown_drivers();
 		engine.shutdown();
 		audio_thread.join();
-	}
-
-	virtual void OnUIRender() override {
-		ImGui::Begin("WAVPlayer");
-
-		if(ImGui::Button("Play"))
-			wp->play();
-
-		
-		if (wp->is_paused()) {
-			if (ImGui::Button("Unpause")) {
-				wp->unpause();
-			}
-		}
-		else {
-			if (ImGui::Button("Pause")) {
-				wp->pause();
-			}
-		}
-
-		if (ImGui::Button("Stop"))
-			wp->stop();
-
-		ImGui::End();
 	}
 };
 
@@ -93,6 +59,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
 
 	Walnut::Application* app = new Walnut::Application(spec);
 	app->PushLayer<AudioLayer>();
+	app->PushLayer<WAVPlayer>();
 	app->SetMenubarCallback([app]() {
 		if (ImGui::BeginMenu("File")) {
 			if (ImGui::MenuItem("Exit")) {
@@ -155,22 +122,7 @@ HRESULT wasapi_test_loop(WASAPISession* wasapi, MasterBuffer* mb) {
 			goto Exit;
 		}
 		
-		// See how much buffer space is available.
-		hr = wasapi->audio_client->GetCurrentPadding(&padding);
-		EXIT_ON_ERROR(hr)
-		frames_requested = wasapi->buffer_size - padding;
 		
-		// Grab the next empty buffer from the audio device.
-		hr = wasapi->render_client->GetBuffer(frames_requested, &wasapi->buffer);
-		EXIT_ON_ERROR(hr);
-
-		// Load the buffer with data from the audio source.
-
-		hr = wasapi->write_data(mb, frames_requested);
-		EXIT_ON_ERROR(hr);
-
-		hr = wasapi->render_client->ReleaseBuffer(frames_requested, wasapi->flags);
-		EXIT_ON_ERROR(hr);
 
 		// create a more readable time code format (the quick and dirty way)
 		double remainder = ++buffers_processed * frames_requested;

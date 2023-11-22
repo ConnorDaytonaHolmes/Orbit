@@ -9,6 +9,8 @@
 #include <Functiondiscoverykeys_devpkey.h>
 #include "../../engine/sampletype.h"
 #include "../../engine/masterbuffer.h"
+#include <thread>
+#include <future>
 
 #define REFTIMES_PER_SEC 10000000
 #define REFTIMES_PER_MS 10000
@@ -33,6 +35,9 @@ struct WFMT_EXT {
 	GUID         subformat;
 };
 
+using namespace std::chrono_literals;
+static constexpr std::chrono::microseconds event_listener_wait_time = 500us;
+
 class WASAPISession {
 public:
 	IAudioSessionControl*	session_control;
@@ -41,10 +46,13 @@ public:
 	IMMDeviceEnumerator*	mm_device_enumerator;
 
 	IMMDevice*				mm_device;
+	std::string				device_name;
+	int						device_id = 0;
+
 	// Information about the currently activated device
 	struct WASAPIDevice {
-		REFERENCE_TIME			minimum_period;
-		REFERENCE_TIME			default_period;
+		REFERENCE_TIME		minimum_period;
+		REFERENCE_TIME		default_period;
 	} mm_device_info;
 	
 	REFERENCE_TIME			req_buffer_duration;
@@ -69,9 +77,16 @@ public:
 	UINT64					master_samples_processed;
 	bool					is_master_processed;
 
+	std::thread				callback_thread;
+	bool					event_listener_running;
+	
+
+	void (*buffer_callback)(void* buffer, UINT32 frames_requested) = nullptr;
+
 	HRESULT initialize(WASAPIOpenMode mode = WASAPIOpenMode::DEFAULT_DEVICE);
+	void start_event_listener();
+	void w_listen();
 	void shutdown();
-	HRESULT write_data(MasterBuffer* const buffer, UINT32 frames_requested);
 	HRESULT write_zeroes();
 	SampleType get_sample_type();
 };

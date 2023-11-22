@@ -1,23 +1,27 @@
 #include "engine.h"
 #include <thread>
-#include "../wavplayer.h"
 
-AudioEngine::~AudioEngine() {
-	shutdown();
-}
+AudioEngine AudioEngine::g_instance;
 
-void AudioEngine::configure(SampleType st, uint32_t buffer_size, double sample_rate) {
-	master = std::make_shared<MasterBuffer>(st, buffer_size, sample_rate);
+void AudioEngine::configure(SampleType sample_type, uint32_t buffer_size, double sample_rate) {
+	master = std::make_shared<MasterBuffer>(sample_type, buffer_size, sample_rate);
 	master->volume = 0.5f;
 	
 	mixer = std::make_shared<Mixer>(buffer_size, sample_rate);
 	mixer->routing_table.assign_route(0, 1, 1.0f);
-	audio_settings.sample_type = st;
-	audio_settings.sample_size = get_sample_size_in_bytes(st);
-	audio_settings.buffer_size = buffer_size;
-	audio_settings.sample_rate = sample_rate;
+
+	uint16_t sample_size = get_sample_size_in_bytes(sample_type);
+	audio_settings = std::make_shared<AudioSettings>(
+		sample_type,
+		sample_size,
+		buffer_size,
+		2,
+		sample_rate);
+
 	configured = true;	
 }
+
+using std::chrono::high_resolution_clock;
 
 bool AudioEngine::start() {
 	if (!configured) {
@@ -30,6 +34,7 @@ bool AudioEngine::start() {
 		on_audio_engine_start();
 
 	while (running) {
+		//auto t1 = high_resolution_clock::now();
 		if (!master->output_ready) {
 			if (!mixer->output_ready) {
 				mixer->process_output();
@@ -38,10 +43,15 @@ bool AudioEngine::start() {
 			if (prepare_double_buffer) {
 				mixer->process_output();
 			}
+			/*
+			auto t2 = high_resolution_clock::now();
+			std::chrono::duration<double, std::micro> micro = t2 - t1;
+			std::cout << "AudioEngine frame execution took " << micro << std::endl;
+			*/
 		}
 		else {
 			std::this_thread::sleep_for(wait_time);
-		}
+		}		
 	}
 
 	return true;
@@ -63,12 +73,12 @@ void AudioEngine::transfer_mixer_to_master() {
 	mixer->prepare_output();
 	const float* mixer_output = mixer->get_output();
 	float* out_buffer = (float*)master->get_output();
-	for (unsigned int i = 0; i < audio_settings.buffer_size; i++) {
+	for (unsigned int i = 0; i < audio_settings->buffer_size; i++) {
 		out_buffer[i] = mixer_output[i] * master->volume;
 	}
 
 	// Convert float32 samples to output sample type
-	switch (audio_settings.sample_type) {
+	switch (audio_settings->sample_type) {
 	case SampleType::Int16LSB:
 	{
 		//TODO
@@ -76,7 +86,7 @@ void AudioEngine::transfer_mixer_to_master() {
 	}
 	case SampleType::Int32LSB:
 	{
-		float32_to_int32_in_place(out_buffer, audio_settings.buffer_size);
+		float32_to_int32_in_place(out_buffer, audio_settings->buffer_size);
 		break;
 	}
 	case SampleType::Float32LSB:

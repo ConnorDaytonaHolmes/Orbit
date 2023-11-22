@@ -3,7 +3,6 @@
 #include <iostream>
 #include "../convertfloat.h"
 #include "iaudiooutput.h"
-#include "mixer.h"
 #include "sampletype.h"
 
 // masterbuffer.IAudioOuput::volume should always be 1.0f?

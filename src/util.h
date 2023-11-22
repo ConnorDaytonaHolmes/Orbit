@@ -10,6 +10,7 @@
 #define stringify( name ) #name
 
 void print_host_error(long err);
+void print_hresult(HRESULT hr);
 unsigned long get_sys_reference_time();
 unsigned long get_sys_reference_time_samples();
 

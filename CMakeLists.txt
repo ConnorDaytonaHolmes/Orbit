@@ -20,20 +20,35 @@ add_executable(${PROJECT_NAME}
 	"src/oscillator.h"
 	"src/util.cpp"
 	"src/util.h"
-	"src/wavplayer.cpp"
-	"src/wavplayer.h"
+	"src/sampler.cpp"
+	"src/sampler.h"
 	"src/driverinterface.cpp"
 	"src/driverinterface.h"
 )
-set(CMAKE_CXX_EXTENSIONS OFF)
-add_compile_options(/EHsc /W3)
-
 
 #ASIO
 set(ASIO_sdk "asiosdk_2.3.3_2019-06-14")
 add_subdirectory(${ASIO_sdk})
 target_link_libraries(${PROJECT_NAME}
 	asiosdk
+)
+
+#Walnut, ImGui, GLFW
+include_external_msproject(WalnutProject 
+	"${PROJECT_SOURCE_DIR}/Walnut/Walnut.vcxproj"
+	GUID C038E8D9-ACDA-12B0-9595-260481D69900
+	PLATFORM x64
+)
+add_dependencies(${PROJECT_NAME} WalnutProject)
+
+set(WalnutLib "${PROJECT_SOURCE_DIR}/Walnut/bin/Debug-windows-x86_64/Walnut/Walnut.lib")
+set(glfwLib "${PROJECT_SOURCE_DIR}/vendor/GLFW/bin/Debug-windows-x86_64/GLFW/GLFW.lib")
+set(imguiLib "${PROJECT_SOURCE_DIR}/vendor/imgui/bin/Debug-windows-x86_64/ImGui/ImGui.lib")
+
+target_link_libraries(${PROJECT_NAME}
+	${WalnutLib}
+	${glfwLib}
+	${imguiLib}
 )
 
 #INTERNAL
@@ -43,6 +58,7 @@ target_link_libraries(${PROJECT_NAME}
 	driver
 	wav
 	wavetable
+	ui
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -59,20 +75,6 @@ target_include_directories(${PROJECT_NAME}
 		"$ENV{CPAL_ASIO_DIR}/host/pc"
 )
 
-
-#Walnut
-include_external_msproject(Walnut 
-	"${PROJECT_SOURCE_DIR}/Walnut/Walnut.vcxproj"
-	GUID C038E8D9-ACDA-12B0-9595-260481D69900
-	PLATFORM x64
-)
-add_dependencies(${PROJECT_NAME} Walnut)
-target_link_libraries(${PROJECT_NAME}
-		"${PROJECT_SOURCE_DIR}/Walnut/bin/Debug-windows-x86_64/Walnut/Walnut.lib"
-		"${PROJECT_SOURCE_DIR}/vendor/imgui/bin/Debug-windows-x86_64/ImGui/ImGui.lib"
-		"${PROJECT_SOURCE_DIR}/vendor/GLFW/bin/Debug-windows-x86_64/GLFW/GLFW.lib"
-)
-
 # Windows
 set(WIN_INCLUDE "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.19041.0\\um")
 target_include_directories(${PROJECT_NAME} PUBLIC "${WIN_INCLUDE}")
@@ -80,10 +82,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC "${WIN_INCLUDE}")
 find_library(winmm_LP winmm)
 find_library(audioeng_LP audioeng)
 find_library(avrt_LP avrt)
-find_library(thedevil audiobaseprocessingobject)
 target_link_libraries(${PROJECT_NAME}
 	${winmm_LP}
 	${audioeng_LP}
 	${avrt_LP}
-	${thedevil}
 )

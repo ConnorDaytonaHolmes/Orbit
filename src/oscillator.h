@@ -2,16 +2,16 @@
 #include <algorithm>
 #include "wavetable/wavetable.h"
 #include "engine/iaudiooutput.h"
-#include <masterbuffer.h>
 #include <wavetable/wavetablecollection.h>
 #include <engine.h>
+#include "engine/igenerator.h"
 
 const double MINIMUM_HZ = 0.01;
 const double MAXIMUM_HZ = 20000.0f;
 
 namespace wt = wavetable;
 namespace osc {
-	struct Oscillator : public IAudioOutput {
+	struct Oscillator : public IAudioOutput, public IGenerator {
 	public:
 		Oscillator(int num_channels, int buffer_size, double sample_rate, wt::Wavetable* wt);
 		Oscillator(int num_channels, int buffer_size, double sample_rate);

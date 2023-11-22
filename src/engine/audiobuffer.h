@@ -12,13 +12,12 @@ struct array_deleter {
 // (1 frame = 1 sample for each channel)
 struct AudioBuffer {
 public:
-	AudioBuffer();
-	AudioBuffer(unsigned int buffer_size);
+	AudioBuffer(uint32_t _size);
 
 	std::shared_ptr<float> buf;
-	unsigned int size;
+	uint32_t size; // in frames
 
-	void resize(unsigned int new_size);
+	void resize(uint32_t new_size);
 	void clear();
 
 	void copy_from(AudioBuffer* src);

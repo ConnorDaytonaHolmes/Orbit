@@ -8,7 +8,7 @@ osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rat
 }
 
 osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate)
-	: IAudioOutput(num_channels, buffer_size, sample_rate) {
+	: IAudioOutput(num_channels, buffer_size, sample_rate), IGenerator(this) {
 }
 
 osc::Oscillator::~Oscillator() {
@@ -90,7 +90,7 @@ wt::WavetableCollection* oscillator_test(AudioEngine* e) {
 		o->set_wavetable(test_wavetable);
 		o->set_hz(frequencies[i]);
 		o->clear_buffer();
-		e->mixer.get()->get_mixer_track(1)->assign_input(o);
+		e->mixer.get()->get_track(1)->assign_input(o);
 		oscillators.push_back(o);
 	}
 

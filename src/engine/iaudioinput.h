@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include "audiobuffer.h"
-#include "iaudiooutput.h"
 #include "route.h"
+#include <igenerator.h>
 
 constexpr int MAX_IAUDIO_INPUT = 128;
 
@@ -17,16 +17,16 @@ public:
 	int _channels;
 
 	// generators that are assigned to this audio input
-	std::vector<IAudioOutput*> generators;
+	std::vector<IGenerator*> generators;
 		
 	// Returns true if successfully added
-	bool assign_input(IAudioOutput* src);
+	bool assign_input(IGenerator* src);
 
 	// Returns true if successfully removed
-	bool remove_input(IAudioOutput* src);
+	bool remove_input(IGenerator* src);
 
 	// Returns index of generator if found, -1 if not
-	int find_input(IAudioOutput* src);
+	int find_input(IGenerator* src);
 
 	virtual void prepare_input();
 

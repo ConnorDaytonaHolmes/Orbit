@@ -1,20 +1,28 @@
-#include "wavplayer.h"
+#include "sampler.h"
+#include "engine.h"
 
-WAVPlayer::WAVPlayer(int buffer_size, double sample_rate)
-	:IAudioOutput(2, buffer_size, sample_rate) {
+Sampler::Sampler() : Sampler (
+	AudioEngine::get_instance().audio_settings->buffer_size,
+	AudioEngine::get_instance().audio_settings->sample_rate) {
+}
+
+
+Sampler::Sampler(int buffer_size, double sample_rate)
+	: IAudioOutput(2, buffer_size, sample_rate), IGenerator(this) {
 	playback_index = 0;
 	wav_data_num_samples = 0;
 	loaded = false;
 	loop = false;
+	paused = false;
 	playing = false;
-	header = WAVHeader{ 0 };
+	wav_header = WAVHeader{ 0 };
 }
 
-WAVPlayer::~WAVPlayer() {
+Sampler::~Sampler() {
 	stop();
 }
 
-void WAVPlayer::process_output() {
+void Sampler::process_output() {
 	if (!playing || !loaded || volume == 0.0f) {
 		return;
 	}
@@ -44,46 +52,46 @@ void WAVPlayer::process_output() {
 	output_ready = true;
 }
 
-void WAVPlayer::play() {
+void Sampler::play() {
 	playback_index = 0;
 	playing = true;
 	paused = false;
 }
 
-void WAVPlayer::stop() {
+void Sampler::stop() {
 	pause();
 	paused = false;
 	playback_index = 0;
 }
 
-void WAVPlayer::pause() {
+void Sampler::pause() {
 	playing = false;
 	paused = true;
 	clear_buffer();
 }
 
-void WAVPlayer::unpause() {
+void Sampler::unpause() {
 	playing = true;
 	paused = false;
 }
 
-void WAVPlayer::seek(uint32_t to_index) {
+void Sampler::seek(uint32_t to_index) {
 	if (to_index >= wav_data_num_samples) {
 		playback_index = 0;
 	}
 	playback_index = to_index;
 }
 
-void WAVPlayer::load(std::filesystem::path p) {
+void Sampler::load(std::filesystem::path p) {
 	FILE* f = fopen(p.string().c_str(), "rb");
 	if (!f) {
 		printf("Failed to open file '%s'.\n", p.string().c_str());
 		loaded = false;
 	}
 	else {
-		std::shared_ptr<float> data = parse_wav_file(f, &header);
+		std::shared_ptr<float> data = parse_wav_file(f, &wav_header);
 		data.swap(wav_data);
-		wav_data_num_samples = header.num_channels * header.sub_chunk_2_size / header.block_align;
+		wav_data_num_samples = wav_header.num_channels * wav_header.sub_chunk_2_size / wav_header.block_align;
 		loaded = true;
 		filename = p.string();
 		printf("Loaded '%s' successfully.\n", filename.c_str());

@@ -1,11 +1,14 @@
-
 #include "iaudiooutput.h"
 #include "iaudioinput.h"
 #include "audiobuffer.h"
 
 IAudioOutput::IAudioOutput(int num_channels, int buffer_size, double sample_rate)
-	: _sample_rate(sample_rate), _channels(num_channels) {
-	out = AudioBuffer(buffer_size);
+	: _sample_rate(sample_rate), _channels(num_channels), out(buffer_size) {
+}
+
+IAudioOutput::IAudioOutput(const AudioSettings& s)
+	: IAudioOutput(s.output_channels, s.buffer_size, s.sample_rate)
+{
 }
 
 IAudioOutput::~IAudioOutput() {

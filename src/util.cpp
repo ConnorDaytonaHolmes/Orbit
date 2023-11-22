@@ -1,5 +1,6 @@
 #include "util.h"
 #include "asio/asio_util.h"
+#include <comdef.h>
 
 void print_host_error(long err) {
 	const char* msg;
@@ -16,6 +17,11 @@ void print_host_error(long err) {
 	else {
 		std::cout << "Unrecognized HostError." << std::endl;
 	}
+}
+
+void print_hresult(HRESULT hr) {
+	_com_error err(hr);
+	std::cout << "HRESULT: " << err.ErrorMessage() << std::endl;
 }
 
 unsigned long get_sys_reference_time() {	// get the system reference time

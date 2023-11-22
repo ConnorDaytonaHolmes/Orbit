@@ -1,13 +1,15 @@
 #pragma once
 #include "engine/iaudiooutput.h"
+#include "engine/igenerator.h"
 #include <filesystem>
 #include "wav/wavheader.h"
 #include "wav/parsewav.h"
 
-class WAVPlayer : public IAudioOutput {
+class Sampler : public IAudioOutput, public IGenerator {
 public:
-	WAVPlayer(int buffer_size, double sample_rate);
-	~WAVPlayer();
+	Sampler();
+	Sampler(int buffer_size, double sample_rate);
+	~Sampler();
 	void process_output() override;
 
 	void play();
@@ -25,8 +27,10 @@ public:
 		this->loop = loop;
 	}
 
+	std::string get_filename() { return filename; }
+
 private:
-	WAVHeader header;
+	WAVHeader wav_header;
 	std::string filename;
 	uint32_t wav_data_num_samples; // IN SAMPLES
 	std::shared_ptr<float> wav_data;

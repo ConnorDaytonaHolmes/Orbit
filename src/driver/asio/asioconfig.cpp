@@ -308,6 +308,8 @@ ASIOTime* ASIO::m_bufferSwitchTimeInfo(ASIOTime* time_info, long index, ASIOBool
 }
 
 void ASIO::shutdown() {
+	if (stopped || !initialized)
+		return;
 	dispose_driver_names();
 	ASIOError stop = ASIOStop();
 	if (stop != ASE_OK) {

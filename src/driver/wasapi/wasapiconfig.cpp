@@ -1,5 +1,11 @@
 #include "wasapiconfig.h"
+#include "wasapiconfig.h"
 #include "audioenginebaseapo.h"
+#include <string>
+#include <locale>
+#include <codecvt>
+#include <comdef.h>
+
 #define EXIT_ON_ERROR(hres) \
 			if (FAILED(hres)) { printf("WASAPI failed to initialize: HRESULT failed on line %d.\n", __LINE__-1); goto Exit; }
 
@@ -15,69 +21,6 @@ const IID IID_IAudioSessionControl = __uuidof(IAudioSessionControl);
 
 const bool LOW_LATENCY_REQUEST = true;
 const bool FAIL_ON_LOW_LATENCY_DENIED = true;
-
-
-HRESULT WASAPISession::write_data(MasterBuffer* const master, UINT32 frames_requested) {	
-	// If buffer is fresh, process master buffer
-	if (!is_master_processed) {
-		master->prepare_output();
-		master->process_output();
-		is_master_processed = true;
-		master_samples_processed = 0;
-	}
-
-
-	// Get the master buffer array,
-	const byte* master_buffer = (byte*)master->get_buffer();
-	size_t remaining_samples_in_master = master->out.size - master_samples_processed;
-	size_t remaining_frames_in_master = remaining_samples_in_master / wave_format->Format.nChannels;
-	size_t size_of_frame = wave_format->Format.nBlockAlign;
-	size_t size_of_sample = size_of_frame / wave_format->Format.nChannels;
-
-	// If not enough samples left in master to fill the requested buffer, 
-	// copy whatevers left then process a new buffer
-	if (remaining_frames_in_master < frames_requested) {
-		size_t leftover_bytes = remaining_frames_in_master * wave_format->Format.nBlockAlign;
-
-		// fill the wasapi buffer with whatevers left in our master
-		// offset master buffer by how many samples already processed
-		memcpy(buffer, (byte*)master_buffer + master_samples_processed * size_of_sample, leftover_bytes);
-		
-		// process new master buffer
-		master->clear_buffer();
-		master->prepare_output();
-		master->process_output();
-		is_master_processed = true;
-		master_samples_processed = 0;
-
-		// fill in remaining space with data from newly processed buffer
-		memcpy(buffer + leftover_bytes, master->get_buffer(), (frames_requested - remaining_frames_in_master) * wave_format->Format.nBlockAlign);
-		master_samples_processed = (frames_requested - remaining_frames_in_master) * wave_format->Format.nChannels;
-	}
-	else {
-		// Else just fill up the wasapi with as many samples as we can
-		memcpy(buffer, (byte*)master_buffer + master_samples_processed * size_of_sample, frames_requested * wave_format->Format.nBlockAlign);
-		master_samples_processed += frames_requested * wave_format->Format.nChannels;
-	}
-
-	/*
-	if (samples_to_write != frames_requested)		
-		printf("Samples to write: %lld, frames_requested: %d, remaining_samples_in_master: %lld  (write & frames should be equal)\n",
-				samples_to_write,	   frames_requested,	 remaining_samples_in_master);
-	*/
-
-	total_samples_processed += frames_requested * wave_format->Format.nChannels;
-	if (master_samples_processed == buffer_size * wave_format->Format.nChannels) {
-		master->clear_buffer();
-		is_master_processed = false;
-	}
-	else if (master_samples_processed > buffer_size * wave_format->Format.nChannels) {
-		printf("Somethings gone horribly wrong. Processed more data from master than we should be able to.\n");
-		return E_FAIL;
-	}
-
-	return S_OK;
-}
 
 HRESULT WASAPISession::write_zeroes() {
 	memset(buffer, 0, buffer_size);
@@ -137,15 +80,32 @@ SampleType WASAPISession::get_sample_type() {
 	return SampleType::UNSUPPORTED;
 }
 
+
+#define PRINT_IF_FAIL(hr, fn) \
+if (FAILED(hr)) {\
+	std::cout << "WASAPI " << fn << " failed to stop.\n" << _com_error(hr).ErrorMessage() << std::endl;\
+}
+
 void WASAPISession::shutdown() {
-	if (render_client)
-		render_client->ReleaseBuffer(buffer_size, flags);
-	if (audio_client)
-		audio_client->Stop();
-	if (event_handle)
-		CloseHandle(event_handle);	
-	if (task_handle)
+	HRESULT hr;
+	if (event_listener_running && callback_thread.joinable()) {
+		event_listener_running = false;
+		callback_thread.join();
+	}
+	if (render_client) {
+		hr = render_client->ReleaseBuffer(buffer_size, flags);
+		PRINT_IF_FAIL(hr, "ReleaseBuffer");
+	}
+	if (audio_client) {
+		hr = audio_client->Stop();
+		PRINT_IF_FAIL(hr, "Stop");
+	}
+	if (event_handle) {
+		CloseHandle(event_handle);
+	}
+	if (task_handle) {
 		AvRevertMmThreadCharacteristics(task_handle);
+	}
 
 	CoTaskMemFree(wave_format);
 	SAFE_RELEASE(mm_device_enumerator);
@@ -159,6 +119,8 @@ HRESULT WASAPISession::initialize(WASAPIOpenMode mode) {
 	AudioClientProperties ac_properties{};
 	BOOL is_offload_capable = false;
 	size_t wf_extra_size;
+	using convert_type = std::codecvt_utf8<wchar_t>;
+	std::wstring_convert<convert_type, wchar_t> converter;
 
 	hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	EXIT_ON_ERROR(hr);
@@ -183,13 +145,13 @@ HRESULT WASAPISession::initialize(WASAPIOpenMode mode) {
 	case CURRENT_DEVICE:
 	case FIRST_DEVICE:
 		printf("Not yet implemented.\n");
-		return -1;
+		return E_FAIL;
 	}
 
-	LPWSTR device_id;
-	hr = mm_device->GetId(&device_id);
+	LPWSTR device_id_str;
+	hr = mm_device->GetId(&device_id_str);
 	EXIT_ON_ERROR(hr);
-
+	printf("Device id: %s\n", device_id_str);
 
 	IPropertyStore* device_properties;
 	PROPVARIANT dfn;
@@ -202,6 +164,8 @@ HRESULT WASAPISession::initialize(WASAPIOpenMode mode) {
 	if (dfn.vt != VT_EMPTY) {
 		printf("Device selected: %S (%S)\n", dfn.pwszVal, device_id);
 	}
+
+	device_name = converter.to_bytes(dfn.pwszVal);
 
 	// Active endpoint device
 	mm_device->Activate(
@@ -267,9 +231,9 @@ HRESULT WASAPISession::initialize(WASAPIOpenMode mode) {
 	EXIT_ON_ERROR(hr)
 
 	// Create empty event handler
-	event_handle = CreateEvent(NULL, FALSE, FALSE, NULL);
+	event_handle = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 	if (event_handle == NULL) {
-		hr = E_FAIL;
+		hr = HRESULT_FROM_WIN32(GetLastError());
 	}
 	EXIT_ON_ERROR(hr);
 
@@ -320,6 +284,55 @@ Exit:
 	}
 	shutdown();
 	return hr;
+}
+
+void WASAPISession::start_event_listener() {	
+	callback_thread = std::thread(&WASAPISession::w_listen, this);
+}
+
+void WASAPISession:: w_listen() {
+	event_listener_running = true;
+	UINT32 padding = 0;
+	UINT32 frames_requested = 0;
+	HRESULT hr;
+
+	while (event_listener_running) {
+		DWORD retval = WaitForSingleObject(event_handle, 2000);
+		if (retval != WAIT_OBJECT_0) {
+			event_listener_running = false;
+			hr = ERROR_TIMEOUT;
+			break;
+		}
+
+		// See how much buffer space is available.
+		hr = audio_client->GetCurrentPadding(&padding);
+		EXIT_ON_ERROR(hr);
+
+		frames_requested = buffer_size - padding;
+
+		// Grab the next empty buffer from the audio device.
+		hr = render_client->GetBuffer(frames_requested, &buffer);
+		EXIT_ON_ERROR(hr);
+
+		buffer_callback(buffer, frames_requested);			
+
+		hr = render_client->ReleaseBuffer(frames_requested, flags);
+		EXIT_ON_ERROR(hr);
+
+	}
+
+Exit:
+	Sleep((DWORD)(req_buffer_duration / REFTIMES_PER_MS));
+	//std::this_thread::sleep_for(event_listener_wait_time);
+
+	if (FAILED(hr)) {
+		std::cout << "WASAPI callback listener exited with error: " << _com_error(hr).ErrorMessage() << std::endl;
+	}
+	else {
+		std::cout << "WASAPI callback listener exited." << std::endl;
+	}
+
+	shutdown();
 }
 
 const std::unordered_map<long, std::string> aud_clnt_errors = {

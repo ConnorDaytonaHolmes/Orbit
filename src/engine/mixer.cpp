@@ -4,12 +4,10 @@ IAudioChannel Mixer_make_mixer_track(int input_channels, int output_channels, in
 	return IAudioChannel(input_channels, output_channels, buffer_size, sample_rate);
 }
 
-Mixer::Mixer(int buffer_size, double sample_rate)
+Mixer::Mixer(uint32_t buffer_size, double sample_rate) //std::same_as<MixerTrackConfig> auto&& ... mixer_config)
 	: IAudioOutput(2, buffer_size, sample_rate) {
 	for (int i = 0; i < MAX_MIXER_TRACKS; i++) {
-		_tracks[i].set_sample_rate(sample_rate);
-		_tracks[i].resize_buffer(buffer_size);
-		_tracks[i].ok();
+		_tracks.emplace_back(IAudioChannel(2, 2, buffer_size, sample_rate));
 	}
 }
 
@@ -25,20 +23,18 @@ void Mixer::prepare_output() {
 
 	// Prepare collects audio from generators
 	// (synths, samplers, wav recordings etc.)
-	for (int i = 0; i < MAX_MIXER_TRACKS; i++) {
-		IAudioChannel* c = &_tracks[i];
-		c->prepare_output();
-		c->prepare_input();
-		c->collect_input();
+	for (IAudioChannel& c : _tracks) {
+		c.prepare_output();
+		c.prepare_input();
+		c.collect_input();
 	}
 }
 
 void Mixer::clear_buffer() {
 	IAudioOutput::clear_buffer();
 	
-	for (int i = 0; i < MAX_MIXER_TRACKS; i++) {
-		IAudioChannel* c = &_tracks[i];
-		c->clear_buffer();
+	for (IAudioChannel& c : _tracks) {
+		c.clear_buffer();
 	}
 }
 
