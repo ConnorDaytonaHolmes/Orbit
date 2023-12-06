@@ -4,7 +4,7 @@
 
 class Mixer : public IAudioOutput {
 public:
-	Mixer(uint32_t buffer_size, double sample_rate);
+	Mixer(uint32_t buffer_size, double sample_rate, const PanningLaw& panning_law);
 	RoutingTable routing_table;
 
 	const float* const get_output();

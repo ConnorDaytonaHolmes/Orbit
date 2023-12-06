@@ -52,10 +52,10 @@ public:
 	DeviceDetails* current_device;
 	ASIO asio {};
 	WASAPISession wasapi {};
-	AudioEngine* engine;
+	AudioEngine& engine = AudioEngine::get_instance();;
 	void* window_handle;
 
-	void initialize(AudioEngine* engine, void* w_handle);
+	void initialize(void* w_handle);
 	long init_asio();
 	HRESULT init_wasapi();
 	void shutdown_drivers();

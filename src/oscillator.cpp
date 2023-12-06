@@ -2,13 +2,13 @@
 #include <engine/masterbuffer.h>
 #include <engine.h>
 
-osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate, wt::Wavetable* wt)
-: Oscillator(num_channels, buffer_size, sample_rate) {
+osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate, const PanningLaw& panning_law, wt::Wavetable* wt)
+: Oscillator(num_channels, buffer_size, sample_rate, panning_law) {
 	_wavetable = wt;
 }
 
-osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate)
-	: IAudioOutput(num_channels, buffer_size, sample_rate), IGenerator(this) {
+osc::Oscillator::Oscillator(int num_channels, int buffer_size, double sample_rate, const PanningLaw& panning_law)
+	: IAudioOutput(num_channels, buffer_size, sample_rate, panning_law), IGenerator(this) {
 }
 
 osc::Oscillator::~Oscillator() {
@@ -27,7 +27,7 @@ void osc::Oscillator::set_wavetable(wt::Wavetable* new_wt) {
 
 void osc::Oscillator::set_hz(double hz) {
 	_hz = std::clamp(hz, MINIMUM_HZ, MAXIMUM_HZ);
-	_index_offset = wt::WAVETABLE_SIZE * _hz / _sample_rate;
+	_index_offset = wt::WAVETABLE_SIZE * _hz / sample_rate;
 }
 
 double osc::Oscillator::get_hz() {
@@ -36,7 +36,7 @@ double osc::Oscillator::get_hz() {
 
 void osc::Oscillator::set_sample_rate(double sample_rate) {
 	IAudioOutput::set_sample_rate(sample_rate);
-	_index_offset = wt::WAVETABLE_SIZE * _hz / _sample_rate;
+	_index_offset = wt::WAVETABLE_SIZE * _hz / sample_rate;
 }
 
 void osc::Oscillator::process_output() {
@@ -50,14 +50,15 @@ void osc::Oscillator::process_output() {
 		// Populate buffer with sampled wavetable data
 		// two writes, one to left, one to right (interleaved)
 		// oscillators are always mono
-		for (unsigned int i = 0; i < get_buffer_size(); i += _channels) {
-			float value = volume * _wavetable->get_sample((float)_sample_index);
-			for (int n = 0; n < _channels; n++) {
+		for (unsigned int i = 0; i < get_buffer_size(); i += channels) {
+			float value = _wavetable->get_sample((float)_sample_index);
+			for (int n = 0; n < channels; n++) {
 				f_out[i + n] = value;
 			}
 			_sample_index += _index_offset;
 			_sample_index -= (_sample_index >= wt::WAVETABLE_SIZE) * wt::WAVETABLE_SIZE;
 		}
+		IAudioOutput::process_output();
 		output_ready = true;
 	}
 }
@@ -84,7 +85,8 @@ wt::WavetableCollection* oscillator_test(AudioEngine* e) {
 			new osc::Oscillator(
 				2,
 				e->master->out.size,
-				e->master->_sample_rate
+				e->master->sample_rate,
+				e->audio_settings->panning_law
 			);
 		o->volume = 1.0f / frequencies.size();
 		o->set_wavetable(test_wavetable);

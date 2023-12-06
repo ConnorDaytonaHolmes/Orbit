@@ -13,8 +13,8 @@ namespace wt = wavetable;
 namespace osc {
 	struct Oscillator : public IAudioOutput, public IGenerator {
 	public:
-		Oscillator(int num_channels, int buffer_size, double sample_rate, wt::Wavetable* wt);
-		Oscillator(int num_channels, int buffer_size, double sample_rate);
+		Oscillator(int num_channels, int buffer_size, double sample_rate, const PanningLaw& panning_law, wt::Wavetable* wt);
+		Oscillator(int num_channels, int buffer_size, double sample_rate, const PanningLaw& panning_law);
 		~Oscillator();
 
 		void set_sample_rate(double new_sample_rate) override;

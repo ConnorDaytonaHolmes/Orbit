@@ -66,8 +66,8 @@ public:
 	// Else, this value is equal to wave_format->Format->wFormatTag
 	WORD					format_tag;
 
-	HANDLE					event_handle;
-	HANDLE					task_handle;
+	HANDLE					event_handle = nullptr;
+	HANDLE					task_handle = nullptr;
 	DWORD					task_index;
 	BYTE*					buffer;
 	UINT32					buffer_size; // IN FRAMES (num_samples / channels)

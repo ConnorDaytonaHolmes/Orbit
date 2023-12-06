@@ -12,7 +12,7 @@
 // so THIS can scale down output to driver buffer xdxdxd
 struct MasterBuffer : public IAudioOutput {
 public:
-	MasterBuffer(SampleType sample_type, int buffer_size, double sample_rate);
+	MasterBuffer(SampleType sample_type, int buffer_size, double sample_rate, const PanningLaw& panning_law);
 
 	const float* const get_output() override;
 	const void* const get_buffer();

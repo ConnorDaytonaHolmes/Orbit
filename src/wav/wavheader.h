@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <guiddef.h>
 
-constexpr size_t RIFF_CHUNK_SIZE = sizeof(uint8_t) * 8 + sizeof(uint32_t);
+constexpr size_t RIFF_CHUNK_SIZE = 4 * sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint8_t) * 4;
 
 struct WAVHeader {
     // RIFF descriptor

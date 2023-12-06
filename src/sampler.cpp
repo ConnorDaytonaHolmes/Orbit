@@ -3,19 +3,18 @@
 
 Sampler::Sampler() : Sampler (
 	AudioEngine::get_instance().audio_settings->buffer_size,
-	AudioEngine::get_instance().audio_settings->sample_rate) {
+	AudioEngine::get_instance().audio_settings->sample_rate,
+	AudioEngine::get_instance().audio_settings->panning_law) {
 }
 
 
-Sampler::Sampler(int buffer_size, double sample_rate)
-	: IAudioOutput(2, buffer_size, sample_rate), IGenerator(this) {
+Sampler::Sampler(int buffer_size, double sample_rate, const PanningLaw& panning_law)
+	: IAudioOutput(2, buffer_size, sample_rate, panning_law), IGenerator(this) {
 	playback_index = 0;
-	wav_data_num_samples = 0;
 	loaded = false;
 	loop = false;
 	paused = false;
 	playing = false;
-	wav_header = WAVHeader{ 0 };
 }
 
 Sampler::~Sampler() {
@@ -23,32 +22,41 @@ Sampler::~Sampler() {
 }
 
 void Sampler::process_output() {
-	if (!playing || !loaded || volume == 0.0f) {
+	if (!playing || !loaded) {
 		return;
 	}
 
 	float* f_out = out.buf.get();
-	float* f_wav = wav_data.get();
-	if (loop) {
+	
+	if (muted) {
+		playback_index += out.size;
+	}	
+	else if (loop) {
 		for (int i = 0; i < out.size; i++) {
-			float data_val = f_wav[playback_index++];
-			f_out[i] = data_val * volume;
-			playback_index %= wav_data_num_samples;
+			float data_val = wav.samples[playback_index++];
+			f_out[i] = data_val;
 		}
 	}
 	else {
 		uint32_t num_samples = out.size;
-		if (playback_index + num_samples >= wav_data_num_samples) {
-			num_samples -= wav_data_num_samples - playback_index;
+		if (playback_index + num_samples >= wav.samples.size()) {
+			num_samples -= wav.samples.size() - playback_index;
 			memset(&(f_out[num_samples]), 0.0f, out.size - num_samples);
 		}
-		uint32_t samples_until_end = (wav_data_num_samples - playback_index - 1) % out.size;
-		for (int i = 0; i < num_samples; i++) {
-			f_out[i] = wav_data.get()[playback_index++] * volume;
-		}
-		if (playback_index >= wav_data_num_samples)
-			stop();
+		uint32_t samples_until_end = (wav.samples.size() - playback_index - 1) % out.size;
+		for (int i = 0; i < num_samples && playback_index < wav.samples.size(); i++) {
+			f_out[i] = wav.samples[playback_index++];
+		}		
 	}
+
+	if (loop) {
+		playback_index %= wav.samples.size();
+	}
+	else if (playback_index >= wav.samples.size()) {
+		stop();
+	}
+
+	IAudioOutput::process_output();
 	output_ready = true;
 }
 
@@ -76,25 +84,42 @@ void Sampler::unpause() {
 }
 
 void Sampler::seek(uint32_t to_index) {
-	if (to_index >= wav_data_num_samples) {
+	if (to_index >= wav.samples.size()) {
 		playback_index = 0;
 	}
 	playback_index = to_index;
 }
 
-void Sampler::load(std::filesystem::path p) {
-	FILE* f = fopen(p.string().c_str(), "rb");
-	if (!f) {
-		printf("Failed to open file '%s'.\n", p.string().c_str());
+// If we already have a sample loaded, and we try (and fail) to load another,
+// should we be destroying the old sample? maybe we retain the old data until
+// we KNOW the new data is valid?
+void Sampler::load(fs::path path) {
+	std::fstream in = std::fstream(path, std::ios_base::in | std::ios_base::binary);
+	auto opt_wav = parse_wav_file(in);
+	playback_index = 0;
+
+	if (!opt_wav.has_value()) {
 		loaded = false;
+		std::cout << "Failed to load wav file into sampler." << std::endl;
+		return;
 	}
-	else {
-		std::shared_ptr<float> data = parse_wav_file(f, &wav_header);
-		data.swap(wav_data);
-		wav_data_num_samples = wav_header.num_channels * wav_header.sub_chunk_2_size / wav_header.block_align;
-		loaded = true;
-		filename = p.string();
-		printf("Loaded '%s' successfully.\n", filename.c_str());
-		fclose(f);
+	wav = opt_wav.value();
+	wav.filepath = path;
+	wav.filename = path.stem().string();
+	loaded = true;
+
+}
+
+void Sampler::on_message_received(MIDIMessage message) {
+	switch (message.status) {
+	case NOTE_ON:
+		play();
+		break;
+	case NOTE_OFF:
+		// a setting which stops sound when note off, or keeps going
+		// for now just stops
+		stop();
+		break;
 	}
 }
+

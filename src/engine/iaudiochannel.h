@@ -9,8 +9,8 @@
 // IAudioSources that are assigned to this channel
 struct IAudioChannel : public IAudioOutput, public IAudioInput {
 public:
-	IAudioChannel(int num_input_channels, int num_output_channels, uint32_t buffer_size, double sample_rate)
-		: IAudioOutput(num_output_channels, buffer_size, sample_rate),
+	IAudioChannel(int num_input_channels, int num_output_channels, uint32_t buffer_size, double sample_rate, const PanningLaw& panning_law)
+		: IAudioOutput(num_output_channels, buffer_size, sample_rate, panning_law),
 		  IAudioInput(num_input_channels, buffer_size, sample_rate) {
 	}
 

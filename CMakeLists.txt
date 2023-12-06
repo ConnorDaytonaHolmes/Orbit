@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.13)
+﻿cmake_minimum_required (VERSION 3.26)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -10,20 +10,22 @@ endif()
 
 project (Orbit VERSION 0.1)
 configure_file(src/config.h.in config.h)
+option(BUILD_SHARED_LIBS "Building shared libraries." ON)
 
 add_executable(${PROJECT_NAME}
 	"src/main.cpp"
+	"src/asset.h"
 	"src/convertfloat.cpp"
 	"src/convertfloat.h"
+	"src/driverinterface.cpp"
+	"src/driverinterface.h"
 	"src/env_32_64.h"
 	"src/oscillator.cpp"
 	"src/oscillator.h"
-	"src/util.cpp"
-	"src/util.h"
 	"src/sampler.cpp"
 	"src/sampler.h"
-	"src/driverinterface.cpp"
-	"src/driverinterface.h"
+	"src/util.cpp"
+	"src/util.h"
 )
 
 #ASIO
@@ -34,7 +36,7 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 #Walnut, ImGui, GLFW
-include_external_msproject(WalnutProject 
+include_external_msproject(WalnutProject
 	"${PROJECT_SOURCE_DIR}/Walnut/Walnut.vcxproj"
 	GUID C038E8D9-ACDA-12B0-9595-260481D69900
 	PLATFORM x64
@@ -54,8 +56,11 @@ target_link_libraries(${PROJECT_NAME}
 #INTERNAL
 add_subdirectory(src)
 target_link_libraries(${PROJECT_NAME}
-	engine
+	logging
 	driver
+	engine
+	fileio
+	midi
 	wav
 	wavetable
 	ui

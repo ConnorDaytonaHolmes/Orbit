@@ -290,7 +290,7 @@ void WASAPISession::start_event_listener() {
 	callback_thread = std::thread(&WASAPISession::w_listen, this);
 }
 
-void WASAPISession:: w_listen() {
+void WASAPISession::w_listen() {
 	event_listener_running = true;
 	UINT32 padding = 0;
 	UINT32 frames_requested = 0;
@@ -331,8 +331,6 @@ Exit:
 	else {
 		std::cout << "WASAPI callback listener exited." << std::endl;
 	}
-
-	shutdown();
 }
 
 const std::unordered_map<long, std::string> aud_clnt_errors = {

@@ -1,8 +1,8 @@
 #include "masterbuffer.h"
 #include "../util.h"
 
-MasterBuffer::MasterBuffer(SampleType st, int buffer_size, double sample_rate)
-			:IAudioOutput(2, buffer_size, sample_rate) {
+MasterBuffer::MasterBuffer(SampleType st, int buffer_size, double sample_rate, const PanningLaw& panning_law)
+			:IAudioOutput(2, buffer_size, sample_rate, panning_law) {
 	set_sample_type(st);
 	
 }

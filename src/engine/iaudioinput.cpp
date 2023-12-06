@@ -21,7 +21,7 @@ void IAudioInput::collect_input() {
 			printf("Buffer size mismatch {src: %d , dst: %d}\n", src_buffer_size, in.size);
 		}
 		else {
-			in.add(&src->out, src->volume);
+			in.add(&src->out);
 		}
 	}
 	input_ready = true;

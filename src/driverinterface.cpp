@@ -5,9 +5,8 @@
 
 DriverInterface* di;
 
-void DriverInterface::initialize(AudioEngine* a_engine, void* w_handle) {
+void DriverInterface::initialize(void* w_handle) {
 	window_handle = w_handle;
-	engine = a_engine;
 	di = this;
 	current_device = nullptr;	
 
@@ -53,8 +52,8 @@ void DriverInterface::initialize(AudioEngine* a_engine, void* w_handle) {
 		}		
 	}
 	
-	engine->on_audio_engine_start = &DriverInterface_start_driver;
-	engine->configure(_sample_type, _buffer_size, _sample_rate);
+	engine.on_audio_engine_start = &DriverInterface_start_driver;
+	engine.configure(_sample_type, _buffer_size, _sample_rate, PanningLaw::CONST_POWER_4_5);
 }
 
 long DriverInterface::init_asio() {
@@ -181,14 +180,14 @@ void DriverInterface::asio_callback(void* left, void* right) {
 		printf("uhoh. no device :c\n");
 		return;
 	}
-	if (!engine->running || !engine->configured) {
+	if (!engine.running || !engine.configured) {
 		// Audio engine not ready / broken
 		printf("Audio engine not yet ready.\n");
 		memset(left, 0, current_device->buffer_size * current_device->sample_size / 2);
 		memset(right, 0, current_device->buffer_size * current_device->sample_size / 2);
 		return;
 	}	
-	if (!engine->master->output_ready) {
+	if (!engine.master->output_ready) {
 		// underrun
 		printf("Master buffer underrun (wasn't ready in time).\n");
 		memset(left, 0, current_device->buffer_size * current_device->sample_size / 2);
@@ -196,15 +195,15 @@ void DriverInterface::asio_callback(void* left, void* right) {
 		return;
 	}
 
-	int sample_size = engine->audio_settings->sample_size;
-	const void* const master_buffer = engine->master->get_buffer();
+	int sample_size = engine.audio_settings->sample_size;
+	const void* const master_buffer = engine.master->get_buffer();
 
-	for (int sample_idx = 0; sample_idx < engine->audio_settings->buffer_size / 2; sample_idx++) {
+	for (int sample_idx = 0; sample_idx < engine.audio_settings->buffer_size / 2; sample_idx++) {
 		((int*)left)[sample_idx] = ((int*)master_buffer)[2 * sample_idx];
 		((int*)right)[sample_idx] = ((int*)master_buffer)[2 * sample_idx + 1];
 	}
 
-	engine->master->prepare_output();
+	engine.master->prepare_output();
 }
 
 void DriverInterface_wasapi_callback(void* buffer, UINT32 frames_requested) {
@@ -227,7 +226,7 @@ void DriverInterface::wasapi_callback(void* buffer, UINT32 frames_requested) {
 		printf("uhoh. no device :c\n");
 		return;
 	}
-	if (!engine->running || !engine->configured) {
+	if (!engine.running || !engine.configured) {
 		// Audio engine not ready / broken
 		printf("Audio engine not yet ready.\n");
 		memset(buffer, 0, current_device->buffer_size * current_device->sample_size);
@@ -236,9 +235,9 @@ void DriverInterface::wasapi_callback(void* buffer, UINT32 frames_requested) {
 
 	// If master buffer not ready, wait {1ms} (calculate to be less than half of device period)
 	// if still not ready, underrun, memset zero
-	if (!engine->master->output_ready) {
+	if (!engine.master->output_ready) {
 		std::this_thread::sleep_for(wait_for_master_buffer_time);
-		if (!engine->master->output_ready) {
+		if (!engine.master->output_ready) {
 			// underrun :(
 			memset(buffer, 0, frames_requested * wasapi.wave_format->Format.nBlockAlign);
 			wasapi.master_samples_processed = 0;
@@ -248,8 +247,8 @@ void DriverInterface::wasapi_callback(void* buffer, UINT32 frames_requested) {
 	}
 
 	// Get the master buffer array,
-	const byte* master_buffer = (byte*)engine->master->get_buffer();
-	size_t remaining_samples_in_master = engine->master->out.size - wasapi.master_samples_processed;
+	const byte* master_buffer = (byte*)engine.master->get_buffer();
+	size_t remaining_samples_in_master = engine.master->out.size - wasapi.master_samples_processed;
 	size_t remaining_frames_in_master = remaining_samples_in_master / wasapi.wave_format->Format.nChannels;
 	size_t size_of_frame = wasapi.wave_format->Format.nBlockAlign;
 	size_t size_of_sample = size_of_frame / wasapi.wave_format->Format.nChannels;
@@ -263,10 +262,10 @@ void DriverInterface::wasapi_callback(void* buffer, UINT32 frames_requested) {
 		// fill the wasapi buffer with whatevers left in our master
 		// offset master buffer by how many samples already processed
 		memcpy(buffer, (byte*)master_buffer + wasapi.master_samples_processed * size_of_sample, leftover_bytes);
-		engine->master->prepare_output();
+		engine.master->prepare_output();
 
 		std::this_thread::sleep_for(wait_for_master_buffer_time);
-		if (!engine->master->output_ready) {
+		if (!engine.master->output_ready) {
 			// partial underrun :(
 			memset((byte*)buffer + leftover_bytes, 0, (frames_requested - remaining_frames_in_master) * wasapi.wave_format->Format.nBlockAlign);
 			wasapi.master_samples_processed = 0;
@@ -280,10 +279,10 @@ void DriverInterface::wasapi_callback(void* buffer, UINT32 frames_requested) {
 	else {
 		// Else just fill up the wasapi with as many samples as we can
 		memcpy(buffer, (byte*)master_buffer + wasapi.master_samples_processed * size_of_sample, frames_requested * wasapi.wave_format->Format.nBlockAlign);
-		wasapi.master_samples_processed += frames_requested * wasapi.wave_format->Format.nChannels;
+		wasapi.master_samples_processed += static_cast<unsigned long long>(frames_requested) * wasapi.wave_format->Format.nChannels;
 	}
 
-	if (wasapi.master_samples_processed >= engine->master->out.size * wasapi.wave_format->Format.nChannels) {
-		engine->master->prepare_output();
+	if (wasapi.master_samples_processed >= engine.master->out.size * wasapi.wave_format->Format.nChannels) {
+		engine.master->prepare_output();
 	}
 }

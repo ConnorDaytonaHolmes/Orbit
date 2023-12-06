@@ -3,38 +3,39 @@
 
 AudioEngine AudioEngine::g_instance;
 
-void AudioEngine::configure(SampleType sample_type, uint32_t buffer_size, double sample_rate) {
-	master = std::make_shared<MasterBuffer>(sample_type, buffer_size, sample_rate);
-	master->volume = 0.5f;
-	
-	mixer = std::make_shared<Mixer>(buffer_size, sample_rate);
-	mixer->routing_table.assign_route(0, 1, 1.0f);
-
+void AudioEngine::configure(SampleType sample_type, uint32_t buffer_size, double sample_rate, PanningLaw panning_law) {
+	_state = AudioEngineState::INITIALIZING;
 	uint16_t sample_size = get_sample_size_in_bytes(sample_type);
 	audio_settings = std::make_shared<AudioSettings>(
 		sample_type,
 		sample_size,
 		buffer_size,
 		2,
-		sample_rate);
+		sample_rate,
+		panning_law);
 
-	configured = true;	
+	master = std::make_shared<MasterBuffer>(sample_type, buffer_size, sample_rate, panning_law);
+	master->volume = 0.5f;
+
+	mixer = std::make_shared<Mixer>(buffer_size, sample_rate, panning_law);
+	mixer->routing_table.assign_route(0, 1, 1.0f);
+
+	configured = true;
+	_state = AudioEngineState::INITIALIZED;
 }
 
-using std::chrono::high_resolution_clock;
-
-bool AudioEngine::start() {
+void AudioEngine::start() {
 	if (!configured) {
-		printf("AudioEngine not yet configured, driver interface failed.");
-		return false;
+		error(AudioEngineError::ATTEMPTED_UNCONFIGURED_START);
+		return;
 	}	
 	running = true;
+	_state = AudioEngineState::RUNNING;
 
 	if (on_audio_engine_start != nullptr)
 		on_audio_engine_start();
 
 	while (running) {
-		//auto t1 = high_resolution_clock::now();
 		if (!master->output_ready) {
 			if (!mixer->output_ready) {
 				mixer->process_output();
@@ -43,18 +44,12 @@ bool AudioEngine::start() {
 			if (prepare_double_buffer) {
 				mixer->process_output();
 			}
-			/*
-			auto t2 = high_resolution_clock::now();
-			std::chrono::duration<double, std::micro> micro = t2 - t1;
-			std::cout << "AudioEngine frame execution took " << micro << std::endl;
-			*/
 		}
 		else {
 			std::this_thread::sleep_for(wait_time);
 		}		
 	}
-
-	return true;
+	_state = AudioEngineState::STOPPED;
 }
 
 void AudioEngine::shutdown() {

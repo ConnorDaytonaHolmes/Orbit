@@ -1,13 +1,9 @@
 #include "mixer.h"
 
-IAudioChannel Mixer_make_mixer_track(int input_channels, int output_channels, int buffer_size, double sample_rate) {
-	return IAudioChannel(input_channels, output_channels, buffer_size, sample_rate);
-}
-
-Mixer::Mixer(uint32_t buffer_size, double sample_rate) //std::same_as<MixerTrackConfig> auto&& ... mixer_config)
-	: IAudioOutput(2, buffer_size, sample_rate) {
+Mixer::Mixer(uint32_t buffer_size, double sample_rate, const PanningLaw& panning_law)
+	: IAudioOutput(2, buffer_size, sample_rate, panning_law) {
 	for (int i = 0; i < MAX_MIXER_TRACKS; i++) {
-		_tracks.emplace_back(IAudioChannel(2, 2, buffer_size, sample_rate));
+		_tracks.emplace_back(IAudioChannel(2, 2, buffer_size, sample_rate, panning_law));
 	}
 }
 
