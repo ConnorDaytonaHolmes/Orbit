@@ -23,6 +23,8 @@ namespace osc {
 		double get_hz();
 		void process_output() override;
 
+		bool playing = false;
+
 	private:
 		wt::Wavetable* _wavetable = nullptr;
 		double _sample_index = 0.0;

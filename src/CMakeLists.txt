@@ -66,8 +66,13 @@ target_link_libraries(fileio PUBLIC logging)
 add_library(midi
 	"midi/controlfunction.h"
 	"midi/message.h"
+	"midi/midi.cpp"
 	"midi/midi.h"
- "midi/message.cpp" "midi/imidireceiver.h")
+	"midi/message.cpp"
+	"midi/message.h"
+	"midi/imidireceiver.cpp"
+	"midi/imidireceiver.h"
+)
 target_include_directories(midi PUBLIC "midi")
 target_link_libraries(midi PUBLIC logging)
 
@@ -94,7 +99,7 @@ target_link_libraries(wavetable PUBLIC logging)
 add_library(ui
 	"ui/wavplayer.h"
 	"ui/wavplayer.cpp"
-)
+ "ui/wtsynth.h")
 target_include_directories(ui PUBLIC
 	"ui"	
 	"$ENV{VULKAN_SDK}/Include"

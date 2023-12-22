@@ -64,7 +64,7 @@ enum ControlFunction {
 
 	PORTAMENTO_CONTROL,
 	HIGH_RESOLUTION_VELOCITY_PREFIX = 0x58,
-	
+
 	EFFECTS_1_DEPTH = 0x5B, // reverb send level
 	EFFECTS_2_DEPTH, // tremolo depth
 	EFFECTS_3_DEPTH, // chorus send level
@@ -88,4 +88,4 @@ enum ControlFunction {
 	OMNI_MODE_ON,
 	MONO_MODE_ON,
 	POLY_MODE_ON,
-}
+};

@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
 	"src/driverinterface.cpp"
 	"src/driverinterface.h"
 	"src/env_32_64.h"
+	"src/event.h"
 	"src/oscillator.cpp"
 	"src/oscillator.h"
 	"src/sampler.cpp"

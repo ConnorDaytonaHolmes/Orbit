@@ -28,6 +28,7 @@
 #include <sampletype.h>
 #include <driverinterface.h>
 #include <wavplayer.h>
+#include <wtsynth.h>
 
 namespace wt = wavetable;
 static constexpr int AUDIO_ENGINE_INIT_TIMEOUT = 10; //seconds
@@ -38,7 +39,7 @@ class AudioLayer : public Walnut::Layer {
 public:
 	AudioEngine& engine = AudioEngine::get_instance();
 	DriverInterface di;
-	std::thread audio_thread;	
+	std::thread audio_thread;
 
 	virtual void OnAttach() override {
 		audio_thread = std::thread([this]() {
@@ -74,6 +75,7 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv) {
 	
 	if (AudioEngine::is_ok()) {
 		app->PushLayer<WAVPlayer>();
+		app->PushLayer<WTSynth>();
 	}
 
 	app->SetMenubarCallback([app]() {

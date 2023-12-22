@@ -71,3 +71,7 @@ float lerp(float a, float b, float t);
 float clamp(float value, float min, float max);
 float clamp_0_1(float value);
 float clamp_n1_1(float value);
+
+
+template<typename T>
+bool vec_contains(std::vector<T> vec, T ele);

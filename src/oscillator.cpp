@@ -40,7 +40,7 @@ void osc::Oscillator::set_sample_rate(double sample_rate) {
 }
 
 void osc::Oscillator::process_output() {
-	if (!_wavetable) {
+	if (!_wavetable || !playing) {
 		// No assigned wavetable? all zero baby
 		clear_buffer();
 		output_ready = true;

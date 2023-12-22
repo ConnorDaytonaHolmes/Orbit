@@ -48,8 +48,11 @@ namespace wavetable {
 		// Returns true if found a wavetable of that name
 		bool find_wavetable(_In_ const char* wt_name, _Out_ Wavetable** wavetable);
 
+		static WavetableCollection& get_instance() { return instance; }
+
 	private:
 		std::vector<Wavetable*> wavetables;
+		static WavetableCollection& instance;
 	};
 }
 

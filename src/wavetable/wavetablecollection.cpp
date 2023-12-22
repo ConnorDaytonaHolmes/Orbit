@@ -5,6 +5,7 @@
 
 namespace wavetable {
 
+	WavetableCollection& WavetableCollection::instance = *load_wavetable_library();
 	const unsigned int WAVETABLE_SIZE_BYTES = WAVETABLE_SIZE * sizeof(float);
 
 	int WavetableCollection::load_folder(fsys::path const& root) {
@@ -116,6 +117,7 @@ namespace wavetable {
 		for (int i = 0; i < wavetables.size(); i++) {
 			if (strcmp(wavetables[i]->name, wt_name) == 0) {
 				*wavetable = wavetables[i];
+				wavetables[i]->add_ref();
 				return true;
 			}
 		}

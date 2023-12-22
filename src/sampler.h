@@ -8,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-class Sampler : public IAudioOutput, public IGenerator, public IMidiReceiver {
+class Sampler : public IAudioOutput, public IGenerator, public IMIDIReceiver {
 public:
 	Sampler();
 	Sampler(int buffer_size, double sample_rate, const PanningLaw& panning_law);

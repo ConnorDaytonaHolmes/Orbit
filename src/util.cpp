@@ -90,3 +90,8 @@ float clamp_n1_1(float value) {
 	return *(float*)&a;
 	return clamp(value, -1.0, 1.0); */
 }
+
+template<typename T>
+bool vec_contains(std::vector<T> v, T ele) {
+	return std::find(v.begin(), v.end(), ele) != v.end();
+}
